@@ -1,0 +1,12 @@
+---
+layout: default
+---
+<div>
+    {% include nav.html %}
+    {% for post in site.posts %}
+    <a class="unstyled-link" href="{{ post.url }}">
+        <h3><u>{{ post.title }}</u> <span class="line">:: {{ post.date | date: "%b %-d, %Y"}} </span></h3>
+      <p>{{ post.excerpt }}</p>
+    </a>
+    {% endfor %}
+</div>

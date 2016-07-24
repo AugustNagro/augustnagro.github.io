@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Udiff src/java.base/share/classes/java/util/stream/ReferencePipeline.java</title>
+
+<style type="text/css" media="screen">
+span.new {
+    color: blue;
+    font-weight: normal;
+}
+</style>
+
+</head>
+<body id="SUNWwebrev">
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.udiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> next &gt</center>
+<h2>src/java.base/share/classes/java/util/stream/ReferencePipeline.java</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing
+rev <a href="https://bugs.openjdk.java.net/browse/JDK-53969">53969</a> : added map loadfactor and collector nullchecks</pre>
+        <pre>
+</pre><hr /><pre>
+<span class="newmarker">@@ -568,22 +568,68 @@</span>
+     public final &lt;R, A&gt; R collect(Collector&lt;? super P_OUT, A, R&gt; collector) {
+         A container;
+         if (isParallel()
+                 &amp;&amp; (collector.characteristics().contains(Collector.Characteristics.CONCURRENT))
+                 &amp;&amp; (!isOrdered() || collector.characteristics().contains(Collector.Characteristics.UNORDERED))) {
+<span class="removed">-            container = collector.supplier().get();</span>
+<span class="removed">-            BiConsumer&lt;A, ? super P_OUT&gt; accumulator = collector.accumulator();</span>
+<span class="removed">-            forEach(u -&gt; accumulator.accept(container, u));</span>
+<span class="new">+            container = evaluate(new UnorderedConcurrentCollectorOp&lt;&gt;(collector));</span>
+         }
+         else {
+             container = evaluate(ReduceOps.makeRef(collector));
+         }
+         return collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)
+                ? (R) container
+                : collector.finisher().apply(container);
+     }
+ 
+<span class="new">+    /**</span>
+<span class="new">+     * A TerminalOp for unordered, concurrent collectors. The semantics are</span>
+<span class="new">+     * very similar to ForEachOp, except presizing is supported and the</span>
+<span class="new">+     * intermediary Collector accumulation type is made accessible.</span>
+<span class="new">+     *</span>
+<span class="new">+     * @param &lt;T&gt; The Collector's input element type</span>
+<span class="new">+     * @param &lt;A&gt; The Collector's mutable accumulation type</span>
+<span class="new">+     */</span>
+<span class="new">+    static final class UnorderedConcurrentCollectorOp&lt;T, A&gt; implements TerminalOp&lt;T, A&gt;, TerminalSink&lt;T, A&gt; {</span>
+<span class="new">+        final IntFunction&lt;A&gt; sizedSupplier;</span>
+<span class="new">+        final Supplier&lt;A&gt; supplier;</span>
+<span class="new">+        final BiConsumer&lt;A, ? super T&gt; accumulator;</span>
+<span class="new">+</span>
+<span class="new">+        A res;</span>
+<span class="new">+</span>
+<span class="new">+        UnorderedConcurrentCollectorOp(Collector&lt;? super T, A, ?&gt; collector) {</span>
+<span class="new">+            this.sizedSupplier = Objects.requireNonNull(collector).sizedSupplier();</span>
+<span class="new">+            this.supplier = collector.supplier();</span>
+<span class="new">+            this.accumulator = collector.accumulator();</span>
+<span class="new">+        }</span>
+<span class="new">+</span>
+<span class="new">+        @Override</span>
+<span class="new">+        public A get() {</span>
+<span class="new">+            return res;</span>
+<span class="new">+        }</span>
+<span class="new">+</span>
+<span class="new">+        @Override</span>
+<span class="new">+        public void accept(T t) {</span>
+<span class="new">+            accumulator.accept(res, t);</span>
+<span class="new">+        }</span>
+<span class="new">+</span>
+<span class="new">+        @Override</span>
+<span class="new">+        public &lt;P_IN&gt; A evaluateSequential(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {</span>
+<span class="new">+            throw new IllegalStateException("Cannot evaluate UnorderedConcurrentCollectorOp sequentially");</span>
+<span class="new">+        }</span>
+<span class="new">+</span>
+<span class="new">+        @Override</span>
+<span class="new">+        public &lt;P_IN&gt; A evaluateParallel(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {</span>
+<span class="new">+            long size = helper.exactOutputSizeIfKnown(spliterator);</span>
+<span class="new">+            if (size &lt; 0 || size &gt; Integer.MAX_VALUE)</span>
+<span class="new">+                res = supplier.get();</span>
+<span class="new">+            else</span>
+<span class="new">+                res = sizedSupplier.apply((int) size);</span>
+<span class="new">+            new ForEachOps.ForEachTask&lt;&gt;(helper, spliterator, helper.wrapSink(this)).invoke();</span>
+<span class="new">+            return res;</span>
+<span class="new">+        }</span>
+<span class="new">+    }</span>
+<span class="new">+</span>
+     @Override
+     public final &lt;R&gt; R collect(Supplier&lt;R&gt; supplier,
+                                BiConsumer&lt;R, ? super P_OUT&gt; accumulator,
+                                BiConsumer&lt;R, R&gt; combiner) {
+         return evaluate(ReduceOps.makeRef(supplier, accumulator, combiner));
+</pre>
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.udiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> next &gt</center>
+</body></html>
+

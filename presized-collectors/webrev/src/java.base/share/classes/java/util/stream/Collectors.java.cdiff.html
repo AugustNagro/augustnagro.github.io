@@ -1,0 +1,498 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Cdiff src/java.base/share/classes/java/util/stream/Collectors.java</title>
+</head>
+<body id="SUNWwebrev">
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collector.java.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.cdiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/share/classes/java/util/stream/Collectors.java</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+        <pre>
+<hr /><span class="oldmarker">*** 43,62 ****</span>
+  import java.util.Optional;
+  import java.util.Set;
+  import java.util.StringJoiner;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.ConcurrentMap;
+<span class="changed">! import java.util.function.BiConsumer;</span>
+<span class="changed">! import java.util.function.BiFunction;</span>
+<span class="changed">! import java.util.function.BinaryOperator;</span>
+<span class="changed">! import java.util.function.Consumer;</span>
+<span class="changed">! import java.util.function.Function;</span>
+<span class="changed">! import java.util.function.Predicate;</span>
+<span class="changed">! import java.util.function.Supplier;</span>
+<span class="changed">! import java.util.function.ToDoubleFunction;</span>
+<span class="changed">! import java.util.function.ToIntFunction;</span>
+<span class="changed">! import java.util.function.ToLongFunction;</span>
+  
+  /**
+   * Implementations of {@link Collector} that implement various useful reduction
+   * operations, such as accumulating elements into collections, summarizing
+   * elements according to various criteria, etc.
+<span class="newmarker">--- 43,53 ----</span>
+  import java.util.Optional;
+  import java.util.Set;
+  import java.util.StringJoiner;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.ConcurrentMap;
+<span class="changed">! import java.util.function.*;</span>
+  
+  /**
+   * Implementations of {@link Collector} that implement various useful reduction
+   * operations, such as accumulating elements into collections, summarizing
+   * elements according to various criteria, etc.
+<hr /><span class="oldmarker">*** 191,218 ****</span>
+       *
+       * @param &lt;T&gt; the type of elements to be collected
+       * @param &lt;R&gt; the type of the result
+       */
+      static class CollectorImpl&lt;T, A, R&gt; implements Collector&lt;T, A, R&gt; {
+          private final Supplier&lt;A&gt; supplier;
+          private final BiConsumer&lt;A, T&gt; accumulator;
+          private final BinaryOperator&lt;A&gt; combiner;
+          private final Function&lt;A, R&gt; finisher;
+          private final Set&lt;Characteristics&gt; characteristics;
+  
+<span class="changed">!         CollectorImpl(Supplier&lt;A&gt; supplier,</span>
+                        BiConsumer&lt;A, T&gt; accumulator,
+                        BinaryOperator&lt;A&gt; combiner,
+                        Function&lt;A,R&gt; finisher,
+                        Set&lt;Characteristics&gt; characteristics) {
+              this.supplier = supplier;
+              this.accumulator = accumulator;
+              this.combiner = combiner;
+              this.finisher = finisher;
+              this.characteristics = characteristics;
+          }
+  
+          CollectorImpl(Supplier&lt;A&gt; supplier,
+                        BiConsumer&lt;A, T&gt; accumulator,
+                        BinaryOperator&lt;A&gt; combiner,
+                        Set&lt;Characteristics&gt; characteristics) {
+              this(supplier, accumulator, combiner, castingIdentity(), characteristics);
+<span class="newmarker">--- 182,228 ----</span>
+       *
+       * @param &lt;T&gt; the type of elements to be collected
+       * @param &lt;R&gt; the type of the result
+       */
+      static class CollectorImpl&lt;T, A, R&gt; implements Collector&lt;T, A, R&gt; {
+<span class="new">+         private final IntFunction&lt;A&gt; sizedSupplier;</span>
+          private final Supplier&lt;A&gt; supplier;
+          private final BiConsumer&lt;A, T&gt; accumulator;
+          private final BinaryOperator&lt;A&gt; combiner;
+          private final Function&lt;A, R&gt; finisher;
+          private final Set&lt;Characteristics&gt; characteristics;
+  
+<span class="changed">!         CollectorImpl(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="changed">!                       Supplier&lt;A&gt; supplier,</span>
+                        BiConsumer&lt;A, T&gt; accumulator,
+                        BinaryOperator&lt;A&gt; combiner,
+                        Function&lt;A,R&gt; finisher,
+                        Set&lt;Characteristics&gt; characteristics) {
+<span class="new">+             this.sizedSupplier = sizedSupplier;</span>
+              this.supplier = supplier;
+              this.accumulator = accumulator;
+              this.combiner = combiner;
+              this.finisher = finisher;
+              this.characteristics = characteristics;
+          }
+  
+<span class="new">+         CollectorImpl(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="new">+                       Supplier&lt;A&gt; supplier,</span>
+<span class="new">+                       BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new">+                       BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new">+                       Set&lt;Characteristics&gt; characteristics) {</span>
+<span class="new">+             this(sizedSupplier, supplier, accumulator, combiner, castingIdentity(), characteristics);</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         CollectorImpl(Supplier&lt;A&gt; supplier,</span>
+<span class="new">+                       BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new">+                       BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new">+                       Function&lt;A,R&gt; finisher,</span>
+<span class="new">+                       Set&lt;Characteristics&gt; characteristics) {</span>
+<span class="new">+             this(ignored -&gt; supplier.get(), supplier, accumulator, combiner, finisher, characteristics);</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+          CollectorImpl(Supplier&lt;A&gt; supplier,
+                        BiConsumer&lt;A, T&gt; accumulator,
+                        BinaryOperator&lt;A&gt; combiner,
+                        Set&lt;Characteristics&gt; characteristics) {
+              this(supplier, accumulator, combiner, castingIdentity(), characteristics);
+<hr /><span class="oldmarker">*** 227,236 ****</span>
+<span class="newmarker">--- 237,251 ----</span>
+          public Supplier&lt;A&gt; supplier() {
+              return supplier;
+          }
+  
+          @Override
+<span class="new">+         public IntFunction&lt;A&gt; sizedSupplier() {</span>
+<span class="new">+             return sizedSupplier;</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         @Override</span>
+          public BinaryOperator&lt;A&gt; combiner() {
+              return combiner;
+          }
+  
+          @Override
+<hr /><span class="oldmarker">*** 273,283 ****</span>
+       * @return a {@code Collector} which collects all the input elements into a
+       * {@code List}, in encounter order
+       */
+      public static &lt;T&gt;
+      Collector&lt;T, ?, List&lt;T&gt;&gt; toList() {
+<span class="changed">!         return new CollectorImpl&lt;&gt;((Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new, List::add,</span>
+                                     (left, right) -&gt; { left.addAll(right); return left; },
+                                     CH_ID);
+      }
+  
+      /**
+<span class="newmarker">--- 288,300 ----</span>
+       * @return a {@code Collector} which collects all the input elements into a
+       * {@code List}, in encounter order
+       */
+      public static &lt;T&gt;
+      Collector&lt;T, ?, List&lt;T&gt;&gt; toList() {
+<span class="changed">!         return new CollectorImpl&lt;&gt;((IntFunction&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed">!                                    (Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed">!                                    List::add,</span>
+                                     (left, right) -&gt; { left.addAll(right); return left; },
+                                     CH_ID);
+      }
+  
+      /**
+<hr /><span class="oldmarker">*** 292,302 ****</span>
+       * @since 10
+       */
+      @SuppressWarnings("unchecked")
+      public static &lt;T&gt;
+      Collector&lt;T, ?, List&lt;T&gt;&gt; toUnmodifiableList() {
+<span class="changed">!         return new CollectorImpl&lt;&gt;((Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new, List::add,</span>
+                                     (left, right) -&gt; { left.addAll(right); return left; },
+                                     list -&gt; (List&lt;T&gt;)List.of(list.toArray()),
+                                     CH_NOID);
+      }
+  
+<span class="newmarker">--- 309,321 ----</span>
+       * @since 10
+       */
+      @SuppressWarnings("unchecked")
+      public static &lt;T&gt;
+      Collector&lt;T, ?, List&lt;T&gt;&gt; toUnmodifiableList() {
+<span class="changed">!         return new CollectorImpl&lt;&gt;((IntFunction&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed">!                                    (Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed">!                                    List::add,</span>
+                                     (left, right) -&gt; { left.addAll(right); return left; },
+                                     list -&gt; (List&lt;T&gt;)List.of(list.toArray()),
+                                     CH_NOID);
+      }
+  
+<hr /><span class="oldmarker">*** 364,374 ****</span>
+       * @return a {@code Collector} that concatenates the input elements into a
+       * {@code String}, in encounter order
+       */
+      public static Collector&lt;CharSequence, ?, String&gt; joining() {
+          return new CollectorImpl&lt;CharSequence, StringBuilder, String&gt;(
+<span class="changed">!                 StringBuilder::new, StringBuilder::append,</span>
+                  (r1, r2) -&gt; { r1.append(r2); return r1; },
+                  StringBuilder::toString, CH_NOID);
+      }
+  
+      /**
+<span class="newmarker">--- 383,393 ----</span>
+       * @return a {@code Collector} that concatenates the input elements into a
+       * {@code String}, in encounter order
+       */
+      public static Collector&lt;CharSequence, ?, String&gt; joining() {
+          return new CollectorImpl&lt;CharSequence, StringBuilder, String&gt;(
+<span class="changed">!                 StringBuilder::new, StringBuilder::new, StringBuilder::append,</span>
+                  (r1, r2) -&gt; { r1.append(r2); return r1; },
+                  StringBuilder::toString, CH_NOID);
+      }
+  
+      /**
+<hr /><span class="oldmarker">*** 455,465 ****</span>
+       */
+      public static &lt;T, U, A, R&gt;
+      Collector&lt;T, ?, R&gt; mapping(Function&lt;? super T, ? extends U&gt; mapper,
+                                 Collector&lt;? super U, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+                                     (r, t) -&gt; downstreamAccumulator.accept(r, mapper.apply(t)),
+                                     downstream.combiner(), downstream.finisher(),
+                                     downstream.characteristics());
+      }
+  
+<span class="newmarker">--- 474,484 ----</span>
+       */
+      public static &lt;T, U, A, R&gt;
+      Collector&lt;T, ?, R&gt; mapping(Function&lt;? super T, ? extends U&gt; mapper,
+                                 Collector&lt;? super U, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+                                     (r, t) -&gt; downstreamAccumulator.accept(r, mapper.apply(t)),
+                                     downstream.combiner(), downstream.finisher(),
+                                     downstream.characteristics());
+      }
+  
+<hr /><span class="oldmarker">*** 500,510 ****</span>
+       */
+      public static &lt;T, U, A, R&gt;
+      Collector&lt;T, ?, R&gt; flatMapping(Function&lt;? super T, ? extends Stream&lt;? extends U&gt;&gt; mapper,
+                                     Collector&lt;? super U, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+                              (r, t) -&gt; {
+                                  try (Stream&lt;? extends U&gt; result = mapper.apply(t)) {
+                                      if (result != null)
+                                          result.sequential().forEach(u -&gt; downstreamAccumulator.accept(r, u));
+                                  }
+<span class="newmarker">--- 519,529 ----</span>
+       */
+      public static &lt;T, U, A, R&gt;
+      Collector&lt;T, ?, R&gt; flatMapping(Function&lt;? super T, ? extends Stream&lt;? extends U&gt;&gt; mapper,
+                                     Collector&lt;? super U, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+                              (r, t) -&gt; {
+                                  try (Stream&lt;? extends U&gt; result = mapper.apply(t)) {
+                                      if (result != null)
+                                          result.sequential().forEach(u -&gt; downstreamAccumulator.accept(r, u));
+                                  }
+<hr /><span class="oldmarker">*** 550,560 ****</span>
+       */
+      public static &lt;T, A, R&gt;
+      Collector&lt;T, ?, R&gt; filtering(Predicate&lt;? super T&gt; predicate,
+                                   Collector&lt;? super T, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+                                     (r, t) -&gt; {
+                                         if (predicate.test(t)) {
+                                             downstreamAccumulator.accept(r, t);
+                                         }
+                                     },
+<span class="newmarker">--- 569,579 ----</span>
+       */
+      public static &lt;T, A, R&gt;
+      Collector&lt;T, ?, R&gt; filtering(Predicate&lt;? super T&gt; predicate,
+                                   Collector&lt;? super T, A, R&gt; downstream) {
+          BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+                                     (r, t) -&gt; {
+                                         if (predicate.test(t)) {
+                                             downstreamAccumulator.accept(r, t);
+                                         }
+                                     },
+<hr /><span class="oldmarker">*** 591,601 ****</span>
+                  characteristics = EnumSet.copyOf(characteristics);
+                  characteristics.remove(Collector.Characteristics.IDENTITY_FINISH);
+                  characteristics = Collections.unmodifiableSet(characteristics);
+              }
+          }
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+                                     downstream.accumulator(),
+                                     downstream.combiner(),
+                                     downstream.finisher().andThen(finisher),
+                                     characteristics);
+      }
+<span class="newmarker">--- 610,621 ----</span>
+                  characteristics = EnumSet.copyOf(characteristics);
+                  characteristics.remove(Collector.Characteristics.IDENTITY_FINISH);
+                  characteristics = Collections.unmodifiableSet(characteristics);
+              }
+          }
+<span class="changed">!         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(),</span>
+<span class="changed">!                                    downstream.supplier(),</span>
+                                     downstream.accumulator(),
+                                     downstream.combiner(),
+                                     downstream.finisher().andThen(finisher),
+                                     characteristics);
+      }
+<hr /><span class="oldmarker">*** 1455,1464 ****</span>
+<span class="newmarker">--- 1475,1485 ----</span>
+       */
+      public static &lt;T, K, U&gt;
+      Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+                                      Function&lt;? super T, ? extends U&gt; valueMapper) {
+          return new CollectorImpl&lt;&gt;(HashMap::new,
+<span class="new">+                                    HashMap::new,</span>
+                                     uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                     uniqKeysMapMerger(),
+                                     CH_ID);
+      }
+  
+<hr /><span class="oldmarker">*** 1714,1723 ****</span>
+<span class="newmarker">--- 1735,1745 ----</span>
+       */
+      public static &lt;T, K, U&gt;
+      Collector&lt;T, ?, ConcurrentMap&lt;K,U&gt;&gt; toConcurrentMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+                                                          Function&lt;? super T, ? extends U&gt; valueMapper) {
+          return new CollectorImpl&lt;&gt;(ConcurrentHashMap::new,
+<span class="new">+                                    ConcurrentHashMap::new,</span>
+                                     uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                     uniqKeysMapMerger(),
+                                     CH_CONCURRENT_ID);
+      }
+  
+<hr /><span class="oldmarker">*** 1929,1940 ****</span>
+                                 BiFunction&lt;? super R1, ? super R2, R&gt; merger) {
+          Objects.requireNonNull(downstream1, "downstream1");
+          Objects.requireNonNull(downstream2, "downstream2");
+          Objects.requireNonNull(merger, "merger");
+  
+<span class="removed">-         Supplier&lt;A1&gt; c1Supplier = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier");</span>
+<span class="removed">-         Supplier&lt;A2&gt; c2Supplier = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier");</span>
+          BiConsumer&lt;A1, ? super T&gt; c1Accumulator =
+                  Objects.requireNonNull(downstream1.accumulator(), "downstream1 accumulator");
+          BiConsumer&lt;A2, ? super T&gt; c2Accumulator =
+                  Objects.requireNonNull(downstream2.accumulator(), "downstream2 accumulator");
+          BinaryOperator&lt;A1&gt; c1Combiner = Objects.requireNonNull(downstream1.combiner(), "downstream1 combiner");
+<span class="newmarker">--- 1951,1960 ----</span>
+<hr /><span class="oldmarker">*** 1954,1965 ****</span>
+              c.remove(Collector.Characteristics.IDENTITY_FINISH);
+              characteristics = Collections.unmodifiableSet(c);
+          }
+  
+          class PairBox {
+<span class="changed">!             A1 left = c1Supplier.get();</span>
+<span class="changed">!             A2 right = c2Supplier.get();</span>
+  
+              void add(T t) {
+                  c1Accumulator.accept(left, t);
+                  c2Accumulator.accept(right, t);
+              }
+<span class="newmarker">--- 1974,1997 ----</span>
+              c.remove(Collector.Characteristics.IDENTITY_FINISH);
+              characteristics = Collections.unmodifiableSet(c);
+          }
+  
+          class PairBox {
+<span class="changed">!             A1 left;</span>
+<span class="changed">!             A2 right;</span>
+<span class="changed">! </span>
+<span class="changed">!             PairBox(int initialSize) {</span>
+<span class="changed">!                 left = Objects.requireNonNull(downstream1.sizedSupplier(), "downstream1 sizedSupplier")</span>
+<span class="changed">!                         .apply(initialSize);</span>
+<span class="changed">!                 right = Objects.requireNonNull(downstream2.sizedSupplier(), "downstream2 sizedSupplier")</span>
+<span class="changed">!                         .apply(initialSize);</span>
+<span class="changed">!             }</span>
+<span class="changed">! </span>
+<span class="changed">!             PairBox() {</span>
+<span class="changed">!                 left = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier").get();</span>
+<span class="changed">!                 right = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier").get();</span>
+<span class="changed">!             }</span>
+  
+              void add(T t) {
+                  c1Accumulator.accept(left, t);
+                  c2Accumulator.accept(right, t);
+              }
+<hr /><span class="oldmarker">*** 1975,1985 ****</span>
+                  R2 r2 = c2Finisher.apply(right);
+                  return merger.apply(r1, r2);
+              }
+          }
+  
+<span class="changed">!         return new CollectorImpl&lt;&gt;(PairBox::new, PairBox::add, PairBox::combine, PairBox::get, characteristics);</span>
+      }
+  
+      /**
+       * Implementation class used by partitioningBy.
+       */
+<span class="newmarker">--- 2007,2022 ----</span>
+                  R2 r2 = c2Finisher.apply(right);
+                  return merger.apply(r1, r2);
+              }
+          }
+  
+<span class="changed">!         return new CollectorImpl&lt;&gt;(PairBox::new,</span>
+<span class="changed">!                                    PairBox::new,</span>
+<span class="changed">!                                    PairBox::add,</span>
+<span class="changed">!                                    PairBox::combine,</span>
+<span class="changed">!                                    PairBox::get,</span>
+<span class="changed">!                                    characteristics);</span>
+      }
+  
+      /**
+       * Implementation class used by partitioningBy.
+       */
+</pre>
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collector.java.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.cdiff.html' target='_top'>next &gt</a></center>
+</body></html>
+

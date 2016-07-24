@@ -1,0 +1,14 @@
+title: August Nagro
+email: augustnagro@gmail.com
+baseurl: ""
+url: "https://august.nagro.us"
+twitter_username: augustnagro
+github_username:  augustnagro
+permalink: none
+
+# Build settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rogue
+  hard_wrap: false

@@ -1,0 +1,649 @@
+# HG changeset patch
+# User august
+# Date 1551656788 21600
+#      Sun Mar 03 17:46:28 2019 -0600
+# Branch presized-collectors
+# Node ID 898cbb56ce6089bfbf5e30c3fc38b7eb066cd607
+# Parent  2bd3e05d4c6fe8315607bd1ba8bf19fa27134012
+enable Collector pre-sizing
+
+diff --git a/src/java.base/share/classes/java/util/stream/Collector.java b/src/java.base/share/classes/java/util/stream/Collector.java
+--- a/src/java.base/share/classes/java/util/stream/Collector.java
++++ b/src/java.base/share/classes/java/util/stream/Collector.java
+@@ -28,10 +28,7 @@
+ import java.util.EnumSet;
+ import java.util.Objects;
+ import java.util.Set;
+-import java.util.function.BiConsumer;
+-import java.util.function.BinaryOperator;
+-import java.util.function.Function;
+-import java.util.function.Supplier;
++import java.util.function.*;
+ 
+ /**
+  * A <a href="package-summary.html#Reduction">mutable reduction operation</a> that
+@@ -203,6 +200,16 @@
+     Supplier<A> supplier();
+ 
+     /**
++     * A function that creates and returns a new mutable result container,
++     * when applied with an initial capacity.
++     *
++     * @return a function which returns a new, mutable result container
++     */
++    default IntFunction<A> sizedSupplier() {
++        return ignored -> supplier().get();
++    }
++
++    /**
+      * A function that folds a value into a mutable result container.
+      *
+      * @return a function which folds a value into a mutable result container
+@@ -261,15 +268,7 @@
+                                               BiConsumer<R, T> accumulator,
+                                               BinaryOperator<R> combiner,
+                                               Characteristics... characteristics) {
+-        Objects.requireNonNull(supplier);
+-        Objects.requireNonNull(accumulator);
+-        Objects.requireNonNull(combiner);
+-        Objects.requireNonNull(characteristics);
+-        Set<Characteristics> cs = (characteristics.length == 0)
+-                                  ? Collectors.CH_ID
+-                                  : Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH,
+-                                                                           characteristics));
+-        return new Collectors.CollectorImpl<>(supplier, accumulator, combiner, cs);
++        return of(ignored -> supplier.get(), supplier, accumulator, combiner, characteristics);
+     }
+ 
+     /**
+@@ -293,6 +292,66 @@
+                                                  BinaryOperator<A> combiner,
+                                                  Function<A, R> finisher,
+                                                  Characteristics... characteristics) {
++        return of(ignored -> supplier.get(), supplier, accumulator, combiner, finisher, characteristics);
++    }
++
++    /**
++     * Returns a new {@code Collector} described by the given {@code supplier},
++     * {@code accumulator}, {@code combiner}, and {@code finisher} functions.
++     *
++     * @param sizedSupplier The sized supplier function for the new collector
++     * @param supplier The supplier function for the new collector
++     * @param accumulator The accumulator function for the new collector
++     * @param combiner The combiner function for the new collector
++     * @param characteristics The collector characteristics for the new
++     *                        collector
++     * @param <T> The type of input elements for the new collector
++     * @param <A> The intermediate accumulation type of the new collector
++     * @param <R> The final result type of the new collector
++     * @throws NullPointerException if any argument is null
++     * @return the new {@code Collector}
++     */
++    public static<T, A, R> Collector<T, A, R> of(IntFunction<A> sizedSupplier,
++                                                 Supplier<A> supplier,
++                                                 BiConsumer<A, T> accumulator,
++                                                 BinaryOperator<A> combiner,
++                                                 Characteristics... characteristics) {
++        Objects.requireNonNull(sizedSupplier);
++        Objects.requireNonNull(supplier);
++        Objects.requireNonNull(accumulator);
++        Objects.requireNonNull(combiner);
++        Objects.requireNonNull(characteristics);
++        Set<Characteristics> cs = (characteristics.length == 0)
++                                  ? Collectors.CH_ID
++                                  : Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH,
++                                                                           characteristics));
++        return new Collectors.CollectorImpl<>(sizedSupplier, supplier, accumulator, combiner, cs);
++    }
++
++    /**
++     * Returns a new {@code Collector} described by the given {@code supplier},
++     * {@code accumulator}, {@code combiner}, and {@code finisher} functions.
++     *
++     * @param sizedSupplier The sized supplier function for the new collector
++     * @param supplier The supplier function for the new collector
++     * @param accumulator The accumulator function for the new collector
++     * @param combiner The combiner function for the new collector
++     * @param finisher The finisher function for the new collector
++     * @param characteristics The collector characteristics for the new
++     *                        collector
++     * @param <T> The type of input elements for the new collector
++     * @param <A> The intermediate accumulation type of the new collector
++     * @param <R> The final result type of the new collector
++     * @throws NullPointerException if any argument is null
++     * @return the new {@code Collector}
++     */
++    public static<T, A, R> Collector<T, A, R> of(IntFunction<A> sizedSupplier,
++                                                 Supplier<A> supplier,
++                                                 BiConsumer<A, T> accumulator,
++                                                 BinaryOperator<A> combiner,
++                                                 Function<A, R> finisher,
++                                                 Characteristics... characteristics) {
++        Objects.requireNonNull(sizedSupplier);
+         Objects.requireNonNull(supplier);
+         Objects.requireNonNull(accumulator);
+         Objects.requireNonNull(combiner);
+@@ -304,7 +363,7 @@
+             Collections.addAll(cs, characteristics);
+             cs = Collections.unmodifiableSet(cs);
+         }
+-        return new Collectors.CollectorImpl<>(supplier, accumulator, combiner, finisher, cs);
++        return new Collectors.CollectorImpl<>(sizedSupplier, supplier, accumulator, combiner, finisher, cs);
+     }
+ 
+     /**
+diff --git a/src/java.base/share/classes/java/util/stream/Collectors.java b/src/java.base/share/classes/java/util/stream/Collectors.java
+--- a/src/java.base/share/classes/java/util/stream/Collectors.java
++++ b/src/java.base/share/classes/java/util/stream/Collectors.java
+@@ -45,16 +45,7 @@
+ import java.util.StringJoiner;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.ConcurrentMap;
+-import java.util.function.BiConsumer;
+-import java.util.function.BiFunction;
+-import java.util.function.BinaryOperator;
+-import java.util.function.Consumer;
+-import java.util.function.Function;
+-import java.util.function.Predicate;
+-import java.util.function.Supplier;
+-import java.util.function.ToDoubleFunction;
+-import java.util.function.ToIntFunction;
+-import java.util.function.ToLongFunction;
++import java.util.function.*;
+ 
+ /**
+  * Implementations of {@link Collector} that implement various useful reduction
+@@ -193,22 +184,41 @@
+      * @param <R> the type of the result
+      */
+     static class CollectorImpl<T, A, R> implements Collector<T, A, R> {
++        private final IntFunction<A> sizedSupplier;
+         private final Supplier<A> supplier;
+         private final BiConsumer<A, T> accumulator;
+         private final BinaryOperator<A> combiner;
+         private final Function<A, R> finisher;
+         private final Set<Characteristics> characteristics;
+ 
++        CollectorImpl(IntFunction<A> sizedSupplier,
++                      Supplier<A> supplier,
++                      BiConsumer<A, T> accumulator,
++                      BinaryOperator<A> combiner,
++                      Function<A,R> finisher,
++                      Set<Characteristics> characteristics) {
++            this.sizedSupplier = sizedSupplier;
++            this.supplier = supplier;
++            this.accumulator = accumulator;
++            this.combiner = combiner;
++            this.finisher = finisher;
++            this.characteristics = characteristics;
++        }
++
++        CollectorImpl(IntFunction<A> sizedSupplier,
++                      Supplier<A> supplier,
++                      BiConsumer<A, T> accumulator,
++                      BinaryOperator<A> combiner,
++                      Set<Characteristics> characteristics) {
++            this(sizedSupplier, supplier, accumulator, combiner, castingIdentity(), characteristics);
++        }
++
+         CollectorImpl(Supplier<A> supplier,
+                       BiConsumer<A, T> accumulator,
+                       BinaryOperator<A> combiner,
+                       Function<A,R> finisher,
+                       Set<Characteristics> characteristics) {
+-            this.supplier = supplier;
+-            this.accumulator = accumulator;
+-            this.combiner = combiner;
+-            this.finisher = finisher;
+-            this.characteristics = characteristics;
++            this(ignored -> supplier.get(), supplier, accumulator, combiner, finisher, characteristics);
+         }
+ 
+         CollectorImpl(Supplier<A> supplier,
+@@ -229,6 +239,11 @@
+         }
+ 
+         @Override
++        public IntFunction<A> sizedSupplier() {
++            return sizedSupplier;
++        }
++
++        @Override
+         public BinaryOperator<A> combiner() {
+             return combiner;
+         }
+@@ -275,7 +290,9 @@
+      */
+     public static <T>
+     Collector<T, ?, List<T>> toList() {
+-        return new CollectorImpl<>((Supplier<List<T>>) ArrayList::new, List::add,
++        return new CollectorImpl<>((IntFunction<List<T>>) ArrayList::new,
++                                   (Supplier<List<T>>) ArrayList::new,
++                                   List::add,
+                                    (left, right) -> { left.addAll(right); return left; },
+                                    CH_ID);
+     }
+@@ -294,7 +311,9 @@
+     @SuppressWarnings("unchecked")
+     public static <T>
+     Collector<T, ?, List<T>> toUnmodifiableList() {
+-        return new CollectorImpl<>((Supplier<List<T>>) ArrayList::new, List::add,
++        return new CollectorImpl<>((IntFunction<List<T>>) ArrayList::new,
++                                   (Supplier<List<T>>) ArrayList::new,
++                                   List::add,
+                                    (left, right) -> { left.addAll(right); return left; },
+                                    list -> (List<T>)List.of(list.toArray()),
+                                    CH_NOID);
+@@ -316,7 +335,9 @@
+      */
+     public static <T>
+     Collector<T, ?, Set<T>> toSet() {
+-        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
++        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
++                                   (Supplier<Set<T>>) HashSet::new,
++                                   Set::add,
+                                    (left, right) -> {
+                                        if (left.size() < right.size()) {
+                                            right.addAll(left); return right;
+@@ -345,7 +366,9 @@
+     @SuppressWarnings("unchecked")
+     public static <T>
+     Collector<T, ?, Set<T>> toUnmodifiableSet() {
+-        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
++        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
++                                   (Supplier<Set<T>>) HashSet::new,
++                                   Set::add,
+                                    (left, right) -> {
+                                        if (left.size() < right.size()) {
+                                            right.addAll(left); return right;
+@@ -366,7 +389,7 @@
+      */
+     public static Collector<CharSequence, ?, String> joining() {
+         return new CollectorImpl<CharSequence, StringBuilder, String>(
+-                StringBuilder::new, StringBuilder::append,
++                StringBuilder::new, StringBuilder::new, StringBuilder::append,
+                 (r1, r2) -> { r1.append(r2); return r1; },
+                 StringBuilder::toString, CH_NOID);
+     }
+@@ -457,7 +480,7 @@
+     Collector<T, ?, R> mapping(Function<? super T, ? extends U> mapper,
+                                Collector<? super U, A, R> downstream) {
+         BiConsumer<A, ? super U> downstreamAccumulator = downstream.accumulator();
+-        return new CollectorImpl<>(downstream.supplier(),
++        return new CollectorImpl<>(downstream.sizedSupplier(), downstream.supplier(),
+                                    (r, t) -> downstreamAccumulator.accept(r, mapper.apply(t)),
+                                    downstream.combiner(), downstream.finisher(),
+                                    downstream.characteristics());
+@@ -502,7 +525,7 @@
+     Collector<T, ?, R> flatMapping(Function<? super T, ? extends Stream<? extends U>> mapper,
+                                    Collector<? super U, A, R> downstream) {
+         BiConsumer<A, ? super U> downstreamAccumulator = downstream.accumulator();
+-        return new CollectorImpl<>(downstream.supplier(),
++        return new CollectorImpl<>(downstream.sizedSupplier(), downstream.supplier(),
+                             (r, t) -> {
+                                 try (Stream<? extends U> result = mapper.apply(t)) {
+                                     if (result != null)
+@@ -552,7 +575,7 @@
+     Collector<T, ?, R> filtering(Predicate<? super T> predicate,
+                                  Collector<? super T, A, R> downstream) {
+         BiConsumer<A, ? super T> downstreamAccumulator = downstream.accumulator();
+-        return new CollectorImpl<>(downstream.supplier(),
++        return new CollectorImpl<>(downstream.sizedSupplier(), downstream.supplier(),
+                                    (r, t) -> {
+                                        if (predicate.test(t)) {
+                                            downstreamAccumulator.accept(r, t);
+@@ -593,7 +616,8 @@
+                 characteristics = Collections.unmodifiableSet(characteristics);
+             }
+         }
+-        return new CollectorImpl<>(downstream.supplier(),
++        return new CollectorImpl<>(downstream.sizedSupplier(),
++                                   downstream.supplier(),
+                                    downstream.accumulator(),
+                                    downstream.combiner(),
+                                    downstream.finisher().andThen(finisher),
+@@ -1457,6 +1481,7 @@
+     Collector<T, ?, Map<K,U>> toMap(Function<? super T, ? extends K> keyMapper,
+                                     Function<? super T, ? extends U> valueMapper) {
+         return new CollectorImpl<>(HashMap::new,
++                                   HashMap::new,
+                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                    uniqKeysMapMerger(),
+                                    CH_ID);
+@@ -1716,6 +1741,7 @@
+     Collector<T, ?, ConcurrentMap<K,U>> toConcurrentMap(Function<? super T, ? extends K> keyMapper,
+                                                         Function<? super T, ? extends U> valueMapper) {
+         return new CollectorImpl<>(ConcurrentHashMap::new,
++                                   ConcurrentHashMap::new,
+                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                    uniqKeysMapMerger(),
+                                    CH_CONCURRENT_ID);
+@@ -1931,8 +1957,6 @@
+         Objects.requireNonNull(downstream2, "downstream2");
+         Objects.requireNonNull(merger, "merger");
+ 
+-        Supplier<A1> c1Supplier = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier");
+-        Supplier<A2> c2Supplier = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier");
+         BiConsumer<A1, ? super T> c1Accumulator =
+                 Objects.requireNonNull(downstream1.accumulator(), "downstream1 accumulator");
+         BiConsumer<A2, ? super T> c2Accumulator =
+@@ -1956,8 +1980,20 @@
+         }
+ 
+         class PairBox {
+-            A1 left = c1Supplier.get();
+-            A2 right = c2Supplier.get();
++            A1 left;
++            A2 right;
++
++            PairBox(int initialSize) {
++                left = Objects.requireNonNull(downstream1.sizedSupplier(), "downstream1 sizedSupplier")
++                        .apply(initialSize);
++                right = Objects.requireNonNull(downstream2.sizedSupplier(), "downstream2 sizedSupplier")
++                        .apply(initialSize);
++            }
++
++            PairBox() {
++                left = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier").get();
++                right = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier").get();
++            }
+ 
+             void add(T t) {
+                 c1Accumulator.accept(left, t);
+@@ -1977,7 +2013,12 @@
+             }
+         }
+ 
+-        return new CollectorImpl<>(PairBox::new, PairBox::add, PairBox::combine, PairBox::get, characteristics);
++        return new CollectorImpl<>(PairBox::new,
++                                   PairBox::new,
++                                   PairBox::add,
++                                   PairBox::combine,
++                                   PairBox::get,
++                                   characteristics);
+     }
+ 
+     /**
+diff --git a/src/java.base/share/classes/java/util/stream/ReduceOps.java b/src/java.base/share/classes/java/util/stream/ReduceOps.java
+--- a/src/java.base/share/classes/java/util/stream/ReduceOps.java
++++ b/src/java.base/share/classes/java/util/stream/ReduceOps.java
+@@ -154,14 +154,16 @@
+      */
+     public static <T, I> TerminalOp<T, I>
+     makeRef(Collector<? super T, I, ?> collector) {
+-        Supplier<I> supplier = Objects.requireNonNull(collector).supplier();
+-        BiConsumer<I, ? super T> accumulator = collector.accumulator();
++        BiConsumer<I, ? super T> accumulator = Objects.requireNonNull(collector).accumulator();
+         BinaryOperator<I> combiner = collector.combiner();
+         class ReducingSink extends Box<I>
+                 implements AccumulatingSink<T, I, ReducingSink> {
+             @Override
+             public void begin(long size) {
+-                state = supplier.get();
++                if (size == -1)
++                    state = collector.supplier().get();
++                else
++                    state = collector.sizedSupplier().apply((int) size);
+             }
+ 
+             @Override
+diff --git a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java b/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
+--- a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
++++ b/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
+@@ -570,9 +570,7 @@
+         if (isParallel()
+                 && (collector.characteristics().contains(Collector.Characteristics.CONCURRENT))
+                 && (!isOrdered() || collector.characteristics().contains(Collector.Characteristics.UNORDERED))) {
+-            container = collector.supplier().get();
+-            BiConsumer<A, ? super P_OUT> accumulator = collector.accumulator();
+-            forEach(u -> accumulator.accept(container, u));
++            container = evaluate(new UnorderedConcurrentCollectorOp<>(collector));
+         }
+         else {
+             container = evaluate(ReduceOps.makeRef(collector));
+@@ -582,6 +580,52 @@
+                : collector.finisher().apply(container);
+     }
+ 
++    /**
++     * A TerminalOp for unordered, concurrent collectors. The semantics are
++     * very similar to ForEachOp, except presizing is supported and the
++     * intermediary Collector accumulation type is made accessible.
++     *
++     * @param <T> The Collector's input element type
++     * @param <A> The Collector's mutable accumulation type
++     */
++    static final class UnorderedConcurrentCollectorOp<T, A> implements TerminalOp<T, A>, TerminalSink<T, A> {
++        final Collector<? super T, A, ?> collector;
++        final BiConsumer<A, ? super T> accumulator;
++
++        A res;
++
++        UnorderedConcurrentCollectorOp(Collector<? super T, A, ?> collector) {
++            this.collector = collector;
++            this.accumulator = collector.accumulator();
++        }
++
++        @Override
++        public A get() {
++            return res;
++        }
++
++        @Override
++        public void accept(T t) {
++            accumulator.accept(res, t);
++        }
++
++        @Override
++        public <P_IN> A evaluateSequential(PipelineHelper<T> helper, Spliterator<P_IN> spliterator) {
++            throw new IllegalStateException("Cannot evaluate UnorderedConcurrentCollectorOp sequentially");
++        }
++
++        @Override
++        public <P_IN> A evaluateParallel(PipelineHelper<T> helper, Spliterator<P_IN> spliterator) {
++            long size;
++            if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
++                res = collector.sizedSupplier().apply((int) size);
++            else
++                res = collector.supplier().get();
++            new ForEachOps.ForEachTask<>(helper, spliterator, helper.wrapSink(this)).invoke();
++            return res;
++        }
++    }
++
+     @Override
+     public final <R> R collect(Supplier<R> supplier,
+                                BiConsumer<R, ? super P_OUT> accumulator,
+# HG changeset patch
+# User august
+# Date 1551726783 21600
+#      Mon Mar 04 13:13:03 2019 -0600
+# Branch presized-collectors
+# Node ID 36bf4095942bf04a1e6388c210a1e3f72b1a841e
+# Parent  898cbb56ce6089bfbf5e30c3fc38b7eb066cd607
+added map loadfactor and collector nullchecks
+
+diff --git a/src/java.base/share/classes/java/util/stream/Collectors.java b/src/java.base/share/classes/java/util/stream/Collectors.java
+--- a/src/java.base/share/classes/java/util/stream/Collectors.java
++++ b/src/java.base/share/classes/java/util/stream/Collectors.java
+@@ -335,9 +335,7 @@
+      */
+     public static <T>
+     Collector<T, ?, Set<T>> toSet() {
+-        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
+-                                   (Supplier<Set<T>>) HashSet::new,
+-                                   Set::add,
++        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
+                                    (left, right) -> {
+                                        if (left.size() < right.size()) {
+                                            right.addAll(left); return right;
+@@ -366,9 +364,7 @@
+     @SuppressWarnings("unchecked")
+     public static <T>
+     Collector<T, ?, Set<T>> toUnmodifiableSet() {
+-        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
+-                                   (Supplier<Set<T>>) HashSet::new,
+-                                   Set::add,
++        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
+                                    (left, right) -> {
+                                        if (left.size() < right.size()) {
+                                            right.addAll(left); return right;
+@@ -389,7 +385,7 @@
+      */
+     public static Collector<CharSequence, ?, String> joining() {
+         return new CollectorImpl<CharSequence, StringBuilder, String>(
+-                StringBuilder::new, StringBuilder::new, StringBuilder::append,
++                StringBuilder::new, StringBuilder::append,
+                 (r1, r2) -> { r1.append(r2); return r1; },
+                 StringBuilder::toString, CH_NOID);
+     }
+@@ -525,7 +521,7 @@
+     Collector<T, ?, R> flatMapping(Function<? super T, ? extends Stream<? extends U>> mapper,
+                                    Collector<? super U, A, R> downstream) {
+         BiConsumer<A, ? super U> downstreamAccumulator = downstream.accumulator();
+-        return new CollectorImpl<>(downstream.sizedSupplier(), downstream.supplier(),
++        return new CollectorImpl<>(downstream.supplier(),
+                             (r, t) -> {
+                                 try (Stream<? extends U> result = mapper.apply(t)) {
+                                     if (result != null)
+@@ -575,7 +571,7 @@
+     Collector<T, ?, R> filtering(Predicate<? super T> predicate,
+                                  Collector<? super T, A, R> downstream) {
+         BiConsumer<A, ? super T> downstreamAccumulator = downstream.accumulator();
+-        return new CollectorImpl<>(downstream.sizedSupplier(), downstream.supplier(),
++        return new CollectorImpl<>(downstream.supplier(),
+                                    (r, t) -> {
+                                        if (predicate.test(t)) {
+                                            downstreamAccumulator.accept(r, t);
+@@ -1480,7 +1476,7 @@
+     public static <T, K, U>
+     Collector<T, ?, Map<K,U>> toMap(Function<? super T, ? extends K> keyMapper,
+                                     Function<? super T, ? extends U> valueMapper) {
+-        return new CollectorImpl<>(HashMap::new,
++        return new CollectorImpl<>(size -> new HashMap<>((int) Math.ceil(size / .75), .75f),
+                                    HashMap::new,
+                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                    uniqKeysMapMerger(),
+@@ -1740,7 +1736,7 @@
+     public static <T, K, U>
+     Collector<T, ?, ConcurrentMap<K,U>> toConcurrentMap(Function<? super T, ? extends K> keyMapper,
+                                                         Function<? super T, ? extends U> valueMapper) {
+-        return new CollectorImpl<>(ConcurrentHashMap::new,
++        return new CollectorImpl<>(size -> new ConcurrentHashMap<>((int) Math.ceil(size / .75), .75f),
+                                    ConcurrentHashMap::new,
+                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+                                    uniqKeysMapMerger(),
+@@ -1957,6 +1953,12 @@
+         Objects.requireNonNull(downstream2, "downstream2");
+         Objects.requireNonNull(merger, "merger");
+ 
++        Supplier<A1> c1Supplier = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier");
++        Supplier<A2> c2Supplier = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier");
++        IntFunction<A1> c1SizedSupplier =
++                Objects.requireNonNull(downstream1.sizedSupplier(), "downstream1 sizedSupplier");
++        IntFunction<A2> c2SizedSupplier =
++                Objects.requireNonNull(downstream2.sizedSupplier(), "downstream2 sizedSupplier");
+         BiConsumer<A1, ? super T> c1Accumulator =
+                 Objects.requireNonNull(downstream1.accumulator(), "downstream1 accumulator");
+         BiConsumer<A2, ? super T> c2Accumulator =
+@@ -1984,15 +1986,13 @@
+             A2 right;
+ 
+             PairBox(int initialSize) {
+-                left = Objects.requireNonNull(downstream1.sizedSupplier(), "downstream1 sizedSupplier")
+-                        .apply(initialSize);
+-                right = Objects.requireNonNull(downstream2.sizedSupplier(), "downstream2 sizedSupplier")
+-                        .apply(initialSize);
++                left = c1SizedSupplier.apply(initialSize);
++                right = c2SizedSupplier.apply(initialSize);
+             }
+ 
+             PairBox() {
+-                left = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier").get();
+-                right = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier").get();
++                left = c1Supplier.get();
++                right = c2Supplier.get();
+             }
+ 
+             void add(T t) {
+diff --git a/src/java.base/share/classes/java/util/stream/ReduceOps.java b/src/java.base/share/classes/java/util/stream/ReduceOps.java
+--- a/src/java.base/share/classes/java/util/stream/ReduceOps.java
++++ b/src/java.base/share/classes/java/util/stream/ReduceOps.java
+@@ -31,16 +31,7 @@
+ import java.util.OptionalLong;
+ import java.util.Spliterator;
+ import java.util.concurrent.CountedCompleter;
+-import java.util.function.BiConsumer;
+-import java.util.function.BiFunction;
+-import java.util.function.BinaryOperator;
+-import java.util.function.DoubleBinaryOperator;
+-import java.util.function.IntBinaryOperator;
+-import java.util.function.LongBinaryOperator;
+-import java.util.function.ObjDoubleConsumer;
+-import java.util.function.ObjIntConsumer;
+-import java.util.function.ObjLongConsumer;
+-import java.util.function.Supplier;
++import java.util.function.*;
+ 
+ /**
+  * Factory for creating instances of {@code TerminalOp} that implement
+@@ -154,16 +145,18 @@
+      */
+     public static <T, I> TerminalOp<T, I>
+     makeRef(Collector<? super T, I, ?> collector) {
+-        BiConsumer<I, ? super T> accumulator = Objects.requireNonNull(collector).accumulator();
++        Supplier<I> supplier = Objects.requireNonNull(collector).supplier();
++        IntFunction<I> sizedSupplier = collector.sizedSupplier();
++        BiConsumer<I, ? super T> accumulator = collector.accumulator();
+         BinaryOperator<I> combiner = collector.combiner();
+         class ReducingSink extends Box<I>
+                 implements AccumulatingSink<T, I, ReducingSink> {
+             @Override
+             public void begin(long size) {
+-                if (size == -1)
+-                    state = collector.supplier().get();
++                if (size < 0 || size > Integer.MAX_VALUE)
++                    state = supplier.get();
+                 else
+-                    state = collector.sizedSupplier().apply((int) size);
++                    state = sizedSupplier.apply((int) size);
+             }
+ 
+             @Override
+diff --git a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java b/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
+--- a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
++++ b/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
+@@ -589,13 +589,15 @@
+      * @param <A> The Collector's mutable accumulation type
+      */
+     static final class UnorderedConcurrentCollectorOp<T, A> implements TerminalOp<T, A>, TerminalSink<T, A> {
+-        final Collector<? super T, A, ?> collector;
++        final IntFunction<A> sizedSupplier;
++        final Supplier<A> supplier;
+         final BiConsumer<A, ? super T> accumulator;
+ 
+         A res;
+ 
+         UnorderedConcurrentCollectorOp(Collector<? super T, A, ?> collector) {
+-            this.collector = collector;
++            this.sizedSupplier = Objects.requireNonNull(collector).sizedSupplier();
++            this.supplier = collector.supplier();
+             this.accumulator = collector.accumulator();
+         }
+ 
+@@ -616,11 +618,11 @@
+ 
+         @Override
+         public <P_IN> A evaluateParallel(PipelineHelper<T> helper, Spliterator<P_IN> spliterator) {
+-            long size;
+-            if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
+-                res = collector.sizedSupplier().apply((int) size);
++            long size = helper.exactOutputSizeIfKnown(spliterator);
++            if (size < 0 || size > Integer.MAX_VALUE)
++                res = supplier.get();
+             else
+-                res = collector.supplier().get();
++                res = sizedSupplier.apply((int) size);
+             new ForEachOps.ForEachTask<>(helper, spliterator, helper.wrapSink(this)).invoke();
+             return res;
+         }
