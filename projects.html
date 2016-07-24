@@ -1,0 +1,16 @@
+---
+layout: default
+---
+<div class="container" style="padding-top: 1rem">
+    {% for post in site.posts %}
+        <div class="row">
+            <div class="md-six md-offset-by-three columns">
+                <a href="{{ post.url }}" class="card">
+                    <h6>{{ post.title }}</h6>
+                    <p>{{ post.date | date: "%b %-d, %Y"}}</p>
+                    <p>{{ post.excerpt }}</p>
+                </a>
+            </div>
+        </div>
+    {% endfor %}
+</div>

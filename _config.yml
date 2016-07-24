@@ -1,0 +1,9 @@
+title: ugust Nagro
+email: augustnagro@gmail.com
+baseurl: ""
+url: "http://augustnagro.com"
+twitter_username: augustnagro
+github_username:  augustnagro
+
+# Build settings
+markdown: kramdown
