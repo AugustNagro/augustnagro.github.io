@@ -1,12 +1,7 @@
 ---
 layout: default
+isIndex: true
 ---
-
-<style type="text/css">
-    body {
-        overflow: hidden;
-    }
-</style>
 
 <header class="ip-header">
   <div class="ip-logo">
@@ -23,7 +18,10 @@ layout: default
                 <a class="button" href="/projects">Projects</a>
             </p>
         </div>
-        <script type="text/javascript" src="{{ '/js/index.js' }}"></script>
     </div>
     {% include footer.html %}
 </div>
+
+<script type="text/javascript">
+  {% include index.js %}
+</script>
