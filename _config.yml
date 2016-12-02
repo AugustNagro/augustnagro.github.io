@@ -5,6 +5,7 @@ url: "https://augustnagro.com"
 twitter_username: augustnagro
 github_username:  augustnagro
 excerpt_separator: <!--more-->
+permalink: none
 
 # Build settings
 markdown: kramdown
