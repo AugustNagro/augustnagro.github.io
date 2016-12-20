@@ -3,7 +3,8 @@ layout: post
 title: "Recommended scalac Options"
 date: 2016-12-1
 ---
-*Threat Stack* recently published a sound review of scala's compiler flags. Here's the archived links: <!--more-->
+
+*Threat Stack* recently published a sound review of scala's compiler flags. Here's the archived links:
 
 * [Part 1](https://web.archive.org/web/20161202041743/http://blog.threatstack.com/useful-scalac-options-for-better-scala-development-part-1)
 * [Part2](https://web.archive.org/web/20161202042342/http://blog.threatstack.com/useful-scala-compiler-options-part-2-advanced-language-features)

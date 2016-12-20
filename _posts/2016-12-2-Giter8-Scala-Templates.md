@@ -3,7 +3,7 @@ layout: post
 title: "Giter8 Scala Templates"
 date: 2016-12-2
 ---
-Defending the configuration of my Scala templates.<!--more-->
+Defending the configuration of my Scala templates.
 
 Contents:
 
@@ -16,8 +16,8 @@ Contents:
     <li><a href="#play">Play</a></li>
 </ol>
 
-##### General Configuration
-In every scala template, the below scalac options are included, and are detailed at [https://augustnagro.com/Recommended-scalac-Options.html](https://augustnagro.com/Recommended-scalac-Options.html)
+### General Configuration
+In every scala template, the below scalac options are included, and are detailed at [Recommended scalac options](https://augustnagro.com/Recommended-scalac-Options.html)
 
 {% highlight scala %}
     scalacOptions ++= Seq(
@@ -46,12 +46,12 @@ Sbt's [cached dependency resolution](http://www.scala-sbt.org/0.13/docs/Cached-R
 
 Each template is licenced under [Creative Commons Zero v1.0](http://choosealicense.com/licenses/cc0-1.0/#).
 
-##### Scala Minimal
+### Scala Minimal
 A no frills Scala template. Initialized with `sbt new augustnagro/s.g8`. and includes the general configuration above.
 
 Source at [https://github.com/augustnagro/s.g8](https://github.com/augustnagro/s.g8)
 
-##### Scala Maven
+### Scala Maven
 Template for projects being published to Sonatype / Maven Central.
 
 `sbt new augustnagro/smaven.g8`
@@ -62,21 +62,21 @@ Relevant SBT Docs:
 
 Source at [https://github.com/augustnagro/sMaven.g8](https://github.com/augustnagro/sMaven.g8)
 
-##### ScalaJS Minimal
+### ScalaJS Minimal
 A [non-modular](https://scalacenter.github.io/scalajs-bundler/motivation.html) Scala.js template.
 
 `sbt new augustnagro/sjs.g8`
 
 Source at [http://github.com/augustnagro/sjs.g8](http://github.com/augustnagro/sjs.g8)
 
-##### ScalaJS Modular
+### ScalaJS Modular
 [Modular](https://scalacenter.github.io/scalajs-bundler/motivation.html) Scala.js template. This is the best solution for managing lots of npm dependencies, but causes a big increase in build time.
 
 `sbt new augustnagro/sjsmod.g8`
 
 Source at [http://github.com/augustnagro/sjsMod.g8](http://github.com/augustnagro/sjsMod.g8)
 
-##### Play
+### Play
 Multi-project build with Scala.js
 
 `sbt new augustnagro/play.g8`
