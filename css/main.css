@@ -47,7 +47,7 @@ span.line {
     text-align: center;
 }
 
-@media (min-width: 30em) {
+@media (min-width: 60em) {
     main {
         padding-right: 25vw;
         padding-left: 25vw;
