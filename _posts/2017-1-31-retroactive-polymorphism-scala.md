@@ -324,6 +324,8 @@ Monoid[Int].empty // 0
 
 Typeclasses are a powerful means of achieving retroactive polymorphism. In future posts, I hope to cover the different styles used by open source libraries like [spire](https://github.com/non/spire) and [cats](typelevel.org/cats/), with usability and performance considerations.
 
+The final code can be found [here](https://gist.github.com/AugustNagro/13bf6ec2c8d984e25ccf7a09694f87e9)
+
 ### Notes
 It should also be mentioned that while [Structural Types](http://docs.scala-lang.org/style/types.html#structural-types) can be used in similar ways, the feature relies on runtime reflection and is discouraged from use.
 
