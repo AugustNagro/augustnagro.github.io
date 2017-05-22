@@ -1,0 +1,91 @@
+{
+  "src/ifps-app.html": {
+    "src/ifps-converter.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-app.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-accumulator.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-area.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-efficiency.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-electric.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-filter.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-flow.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-force.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-logic.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-mechanical-advantage.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-power.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-pressure.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-torque.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-velocity.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-formulas-volume.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-terms.html": {
+      "type": "document",
+      "weight": 1
+    },
+    "src/ifps-view404.html": {
+      "type": "document",
+      "weight": 1
+    }
+  },
+  "src/ifps-converter.html": {},
+  "src/ifps-formulas-accumulator.html": {},
+  "src/ifps-formulas-area.html": {},
+  "src/ifps-formulas-efficiency.html": {},
+  "src/ifps-formulas-electric.html": {},
+  "src/ifps-formulas-filter.html": {},
+  "src/ifps-formulas-flow.html": {},
+  "src/ifps-formulas-logic.html": {},
+  "src/ifps-formulas-mechanical-advantage.html": {},
+  "src/ifps-formulas-power.html": {},
+  "src/ifps-formulas-pressure.html": {},
+  "src/ifps-formulas-torque.html": {},
+  "src/ifps-formulas-velocity.html": {},
+  "src/ifps-terms.html": {},
+  "src/ifps-view404.html": {}
+}
