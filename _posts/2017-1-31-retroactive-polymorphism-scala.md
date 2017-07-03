@@ -238,6 +238,7 @@ object Semigroup {
 
 import Semigroup._
 
+Semigroup[String].combine("foo", "bar") // "foobar"
 "foo" |+| "bar" // "foobar"
 {% endhighlight %}
 
@@ -255,71 +256,6 @@ implicit class SemigroupOps[A](val lhs: A) extends AnyVal{
 }
 {% endhighlight %}
 
-Lets now handle typeclass inheritance by defining `Monoid[T]`, a subtype of `Semigroup[T]`:
-
-{% highlight scala %}
-trait Monoid[A] extends Semigroup[A] {
-  def empty: A
-}
-{% endhighlight %}
-
-`SemigroupOps` should be included whenever importing `Monoid` to get the infix syntax, but it's impossible to directly extend value classes. The easiest alternative is declaring trait `SemigroupSyntax`, that [implicitly converts](docs.scala-lang.org/tutorials/tour/implicit-conversions) type `A` to `SemigroupOps[A]` if the compiler sees `A` invoking methods of `SemigroupOps[A]`. This method should of course require an implicit `Semigroup[T]` be available:
-
-{% highlight scala %}
-object Semigroup {
-
-  ???
-
-  trait SemigroupSyntax{
-
-    implicit def syntaxSemigroup[A: Semigroup](lhs: A): SemigroupOps[A] =
-      // note that a new class will not actually be allocated
-      new SemigroupOps[A](lhs)
-  }
-  
-  // it's also common practice to include an object that exports the
-  // typeclass's syntax
-  object syntax extends SemigroupSyntax
-}
-{% endhighlight %}
-
-Finally, `Monoid`'s companion object could look like:
-
-{% highlight scala %}
-object Monoid {
-  
-  def apply[A](implicit ev: Monoid[A]): Monoid[A] = ev
-  
-  implicit class MonoidOps[A](val lhs: A) extends AnyVal {
-    ???
-  }
-  
-  trait MonoidSyntax {
-    implicit def syntaxMonoid[A: Monoid](lhs: A): MonoidOps[A] =
-      new MonoidOps[A](lhs)
-  }
-  
-  object syntax extends MonoidSyntax with Semigroup.SemigroupSyntax
-  
-  implicit val intMonoid: Monoid[Int] = new Monoid[Int] {
-    def empty: Int = 0
-    def combine(a: Int, b: Int): Int = a + b
-  }
-}
-{% endhighlight %}
-
-And can be used with:
-
-{% highlight scala %}
-import Monoid.syntax._
-
-Monoid[Int].empty // 0
-
-1 |+| 2 // 3
-
-1.combine(2) // 3
-{% endhighlight %}
-
 ### Conclusions
 
 Typeclasses are a powerful means of achieving retroactive polymorphism. In future posts, I hope to cover the different styles used by open source libraries like [spire](https://github.com/non/spire) and [cats](typelevel.org/cats/), with usability and performance considerations.
@@ -328,6 +264,3 @@ The final code can be found [here](https://gist.github.com/AugustNagro/13bf6ec2c
 
 ### Notes
 It should also be mentioned that while [Structural Types](http://docs.scala-lang.org/style/types.html#structural-types) can be used in similar ways, the feature relies on runtime reflection and is discouraged from use.
-
-
-
