@@ -17,7 +17,7 @@ Contents:
 </ol>
 
 ### General Configuration
-In every scala template, the below scalac options are included, and are detailed at [Recommended scalac options](https://augustnagro.com/Recommended-scalac-Options.html)
+In every scala template, the below scalac options are included, and are detailed at [Recommended scalac options](https://august.nagro.us/Recommended-scalac-Options.html)
 
 {% highlight scala %}
     scalacOptions ++= Seq(
