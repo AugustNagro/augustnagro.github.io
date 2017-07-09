@@ -1,0 +1,72 @@
+==================================================================
+https://keybase.io/augustnagro
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of http://august.nagro.us
+  * I am augustnagro (https://keybase.io/augustnagro) on keybase.
+  * I have a public key with fingerprint D9BE 0276 427B 4E32 0A07  8552 19BA 072B D339 AB2D
+
+To do so, I am signing this object:
+
+{
+    "body": {
+        "key": {
+            "eldest_kid": "0101006d245b14f8cee0b0741db077d115e40cfb9a182320aa85a7fce2e7d841ae4b0a",
+            "fingerprint": "d9be0276427b4e320a07855219ba072bd339ab2d",
+            "host": "keybase.io",
+            "key_id": "19ba072bd339ab2d",
+            "kid": "0101006d245b14f8cee0b0741db077d115e40cfb9a182320aa85a7fce2e7d841ae4b0a",
+            "uid": "7af7e7d4ad550ae7639ee0ec84429a19",
+            "username": "augustnagro"
+        },
+        "service": {
+            "hostname": "august.nagro.us",
+            "protocol": "http:"
+        },
+        "type": "web_service_binding",
+        "version": 1
+    },
+    "ctime": 1499561338,
+    "expire_in": 157680000,
+    "prev": "5b031cf312e2ab271f776b4c2b7fa2a13d3beb27caffdf44712049be934f28da",
+    "seqno": 5,
+    "tag": "signature"
+}
+
+which yields the signature:
+
+-----BEGIN PGP MESSAGE-----
+
+owGtkn1QFGUcx4873royCQJFpGQvwEagfb29vUkgkpSBEp0KjJdrX549NnDv2r07
+RbqwRAdoRmAaURxEUYlpuEi0cQiNqUkRMS3JMiaK13Go8SYKFHEoepbJP5rpz56d
+eXaf3+/7/ezv+T1P/TKDLjQguidk3bdMR3LAlV843TbWu7sC4RxCOWKtQErB0guU
+CUB12UolAbEiKAYf1CzgJMVhpGjhAUA5lCYxAc60gGEUIFFe5BgWs+AEjrKshWJp
+kQc4oAULibGA5FAWSUJESbYDxalIsgtiBYYDKE6bSZzmSKD5UNpCUTjGcPAL5wSC
+YFgOF6CxxKFqDlgcx6ogRXLAGFzYlsr7D/3/XLd7CUezIg0TJCtQFMoC2kwwEAh4
+C0niEMFoQhUoMrsdQDXrtrtVl8zaFQfiTUJgwiPxQOuttpl/iVKWVCluFRKcisPl
+4B1lMFnicjmtmtdV7tTEOwBn+wdj4yRZgM2EBg9QVMkhI1YMKnmXpHExkmEoM0YQ
+liQE7HRKCrBJmoKizRYUDu03wAORFFeEEhgvEhgOcNg7GhNp2syRPM7RIouzGCEQ
+HIBxnhVFQSRJGsNREp4bQ5AibhG05qjgTdmBWClYJ2uHTFWyy6zLrQDEa6zRE4G6
+gFBdbFRc4FCv3pNR8RJuDNm79cEFDNJrt09nfCjsQcQ7sXyxJK+96Y682DabNBxu
+KP5APmDoKhzbstBRfmXgjcnsNHPzNLUy92Br8rLeibzWqT/D3WWdUUdqp5HD3qbB
+d58h4sZ/XH5/VcnwlzH+/gvGSH94nLK26OLprMpjV201gxHvvWrNHvZ3tciBq77u
+W+fZWHlw/9uf3RpPvXZp4ObUufqGP45F+6iex04sOsvSz+Ol1WpPw3bzveNg9yfN
+o0N1axNc/K8jxIsluf35k5kFhdjj+16Z+SEj8ZtDdjXH7144eXd9cVJjVvVbabvi
+KxvDJzd3nIoeqwJ3mAvp4qe91860NH/BXV491apr6xz5fToxr1/J5is6xmrbG3qC
+imY2PBe1mFJXHta2oq/yxkRaoTz5/uFgJWJ0c07O0TA0Ywbz+dpj2s7e21p/3vdI
+onraVP+UPmN/zXyGL8pwqXeXHtu7ojD/hcyzafiRU0evj6f5TfNfme4PjuT3TT9/
+dWgw05A6u5FtTO58IrYmwLMhN8fSWj21B5vvfbKgJjjy6Zm/PC36fjHr5zkTffJl
+f+uWluCfhDVI+qZ9B5x107fXtL3jv71t7uaOKtOtsMtF8Q/PBq38fKHYV7azYa6o
+9LuQj7oW25s+7GZGz3gz6Rhy9d31oREtedFVter1umfP/TYRG4BVDxwfziw4Yc0b
+juc+nons7n6UNL7+fZen2fhaMpp6I8HZOXAxwfo3
+=LT3f
+-----END PGP MESSAGE-----
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/augustnagro
+
+==================================================================
