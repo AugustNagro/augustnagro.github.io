@@ -194,15 +194,20 @@ sys   0m0.050s
 Following the guide we create `s.classlist`:
 
 ```
-$ java -Xshare:off -XX:+UnlockCommercialFeatures -XX:DumpLoadedClassList=s.classlist -XX:+UseAppCDS -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
+$ java -Xshare:off -XX:+UnlockCommercialFeatures -XX:DumpLoadedClassList=s.classlist \
+-XX:+UseAppCDS -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
 ```
 Use it to generate a custom `s.jsa` cache,
 ```
-$ java -XX:+UnlockCommercialFeatures -Xshare:dump -XX:+UseAppCDS -XX:SharedArchiveFile=s.jsa -XX:SharedClassListFile=s.classlist -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar
+$ java -XX:+UnlockCommercialFeatures -Xshare:dump -XX:+UseAppCDS \
+-XX:SharedArchiveFile=s.jsa -XX:SharedClassListFile=s.classlist \
+-cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar
 ```
 And then run with the archive:
 ```
-$ time java -XX:+UnlockCommercialFeatures -Xshare:on -XX:+UseAppCDS -XX:SharedArchiveFile=s.jsa -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
+$ time java -XX:+UnlockCommercialFeatures -Xshare:on -XX:+UseAppCDS \
+-XX:SharedArchiveFile=s.jsa \
+-cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
 hello world
 
 real  0m0.173s
@@ -232,7 +237,8 @@ sys   0m0.022s
 ```
 After switching to JDK9 and building a jre image:
 ```
-$ jlink --module-path $JAVA_HOME/jmods:mlib --add-modules com.greetings --output greetingapp --launcher
+$ jlink --module-path $JAVA_HOME/jmods:mlib --add-modules com.greetings \
+--output greetingapp --launcher
 
 $ time ./greetingapp/bin/java -m com.greetings/com.greetings.Main
 Greetings!
@@ -257,7 +263,7 @@ $ brew install nailgun
 $ java -jar /usr/local/Cellar/nailgun/0.9.1/libexec/nailgun-server-0.9.1.jar 
 NGServer 0.9.1 started on all interfaces, port 2113.
 ```
-Load the required jars
+Add the required jars
 
 ```
 $ ng ng-cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar
