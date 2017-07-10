@@ -220,7 +220,7 @@ A big improvement.
 
 [Jlink](http://openjdk.java.net/jeps/282) is part of Java 9's Project Jigsaw and builds custom runtime images. Scala doesn't yet support Java 9, so Java sources were used.
 
-With the compiled `Main.java`, startup is ~100ms in JDK 9
+With the compiled `Main.java`, startup is ~100ms in JDK 8
 ```
 $ cat Main.scala
 public class Main {
