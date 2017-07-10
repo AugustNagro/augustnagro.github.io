@@ -285,4 +285,4 @@ This is by far the fastest method on the JVM. Nailgun is partially responsible f
 
 ## Scala Native and AOT compilation. 
 
-Scala Native and JDK 9's AOT compilation achieve great startup performance but lose the JDK's most compelling benefits (JIT, platform-agnostic execution) in the process. If your application requires sub 200 milisecond response times (sub 100ms for plain java) and Nailgun is not an option, they're the best bet. 
+[Scala Native](scala-native.org) and JDK 9's [AOT compilation](http://openjdk.java.net/jeps/295) achieve great startup performance but lose the JDK's most compelling benefits (JIT, platform-agnostic execution) in the process. If your application requires sub 200 milisecond response times (sub 100ms for plain java) and Nailgun is not an option, they're the best bet. 
