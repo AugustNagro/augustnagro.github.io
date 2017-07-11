@@ -12,13 +12,13 @@ I never managed to finish the design or test with large parties, but wanted to a
 Attached are some Xbox screenshots taken during development. The map download link can be found [here](https://www.halowaypoint.com/en-us/games/halo-5-guardians/xbox-one/map-variants?lastModifiedFilter=Everything&sortOrder=BookmarkCount&page=1&gamertag=LAGGER#ugc_halo-5-guardians_xbox-one_mapvariant_LAGGER_aef23f75-03c4-4c37-8aae-b6d6a4d5b65c).
 
 <p align="center">
-<img src="{{site.url}}/images/halo/phaeton.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton1.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton2.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton3.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton4.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton5.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton6.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton7.png" class="img-responsive"><br>
-<img src="{{site.url}}/images/halo/phaeton8.png" class="img-responsive">
+<img src="http://august.nagro.us/images/halo/phaeton.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton1.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton2.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton3.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton4.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton5.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton6.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton7.png" class="img-responsive"><br>
+<img src="http://august.nagro.us/images/halo/phaeton8.png" class="img-responsive">
 </p>
