@@ -286,3 +286,22 @@ This is by far the fastest method on the JVM. Nailgun is partially responsible f
 ## Scala Native and AOT compilation. 
 
 [Scala Native](scala-native.org) and JDK 9's [AOT compilation](http://openjdk.java.net/jeps/295) achieve great startup performance but lose the JDK's most compelling benefits like JIT and platform-agnostic execution in the process. Anyone skeptical of these managed language features should consider [this talk](https://www.youtube.com/watch?v=Pz-4co8IaI8&feature=youtu.be). If your application requires sub 200 milisecond response times (sub 100ms for plain java) and Nailgun is not an option, they're the best bet. 
+
+## Update 6 August 2017:
+It's also possible to improve startup time by removing usage of Scala's standard library. In this case `scala.Predef.println` was replaced with `System.out.println`:
+```
+$ cat Main.scala 
+object Main {
+  def main(args: Array[String]): Unit = {
+    System.out.println("Hello World")
+  }
+}
+$ scalac Main.scala
+$ time java Main
+Hello World
+
+real  0m0.093s
+user  0m0.072s
+sys   0m0.021s
+```
+To keep convenience methods like `println`, consider [this article](http://august.nagro.us/removing-scala-predef.html)
