@@ -3,7 +3,7 @@ layout: post
 title: "Removing scala.Predef for scala-library.jar Independence"
 date: 2017-8-6
 ---
-Completely removing scala.Predef can be enforced by the compiler with option `-Yno-predef`. In addition to changing default type signatures and functions, removing Predef lets one become independent of Scala's collections library. `scalac` compiled `.class` and `.jar` files can then be directly executed with `java`, without having to add the 5 megabyte`scala-library.jar` to the classpath.
+Completely removing scala.Predef can be enforced by the compiler with option `-Yno-predef`. In addition to changing default type signatures and functions, removing Predef lets one become independent of Scala's collections library. `scalac` compiled `.class` and `.jar` files can then be directly executed with `java`, without having to add the 5 megabyte `scala-library.jar` to the classpath.
 
 To keep Predef's ease-of-use definitions like `println` and `implicitly`, copy Predef directly from [source](https://github.com/scala/scala/blob/v2.11.8/src/library/scala/Predef.scala#L1), or re-implement choice members. This is the implementation in [https://github.com/AugustNagro/s.g8](https://github.com/AugustNagro/s.g8):
 
