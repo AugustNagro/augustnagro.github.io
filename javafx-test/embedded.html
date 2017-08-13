@@ -1,0 +1,29 @@
+<html>
+<head>
+    <style>
+        body { margin: 0; }
+    </style>
+    <script type="text/javascript" src="http://java.com/js/dtjava.js"></script>
+    <script>
+    function launchEmbedded() {
+        dtjava.embed(
+            {
+                id: 'jfx',
+                url: 'jfx.jnlp',
+                placeholder: 'placeholder',
+                width: '100%',
+                height: '100%'
+            },
+            { javafx: '8.0+' },
+            {
+                onGetSplash: function(app) { return null; }
+            }
+        );
+    }
+    dtjava.addOnloadCallback(launchEmbedded);
+    </script>
+</head>
+<body>
+<div id="placeholder"></div>
+</body>
+</html>
