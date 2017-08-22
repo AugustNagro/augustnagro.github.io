@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<jnlp spec="6.0" xmlns:jfx="http://javafx.com" href="jfx.jnlp" version="1.0.0">
+<jnlp spec="6.0" xmlns:jfx="http://javafx.com" href="http://august.nagro.us/javafx-test/jfx.jnlp" version="1.0.0">
     <information>
         <title>JFX Demo</title>
         <vendor>August Nagro</vendor>
         <homepage href="http://august.nagro.us"/>
         <description>Demo JFX Application</description>
-        <icon href="profile-new.jpg" kind="icon"/>
-        <icon href="profile-new.jpg" kind="splash"/>
+        <icon href="http://august.nagro.us/javafx-test/icon.png" />
         <offline-allowed/>
     </information>
     <resources>
         <java version="1.8+"/>
-        <jar href="jfx.jar" version="1.0.0"/>
-        <property name="jnlp.packEnabled" value="true"/>
+        <jar href="http://august.nagro.us/javafx-test/jfx.jar" version="1.0.0"/>
+        <!--<property name="jnlp.packEnabled" value="true"/>-->
         <property name="jnlp.versionEnabled" value="true"/>
     </resources>
     <jfx:javafx-desc main-class="com.augustnagro.Launcher" name="JFX Demo"/>
