@@ -5,8 +5,7 @@ date: 2017-9-28
 ---
 Java is often ridiculed for its verbosity.
 
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/280characters?src=hash&amp;ref_src=twsrc%5Etfw">#280characters</a><br><br>almost enough to do Hello World in Java</p>&mdash; I Am Devloper (@iamdevloper) <a href="https://twitter.com/iamdevloper/status/912955304383533056?ref_src=twsrc%5Etfw">September 27, 2017</a></blockquote>
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p align="center"><blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/280characters?src=hash&amp;ref_src=twsrc%5Etfw">#280characters</a><br><br>almost enough to do Hello World in Java</p>&mdash; I Am Devloper (@iamdevloper) <a href="https://twitter.com/iamdevloper/status/912955304383533056?ref_src=twsrc%5Etfw">September 27, 2017</a></blockquote><script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script></p>
 
 While less of a concern in large applications that require readability and structure, Java’s garrulity and compilation requirement has made it an uncommon choice for scripting. With the introduction of [JShell](https://docs.oracle.com/javase/9/jshell/introduction-jshell.htm), Java 9’s new REPL, the language can finally be leveraged from an interpreted context. Consider:
 
@@ -15,6 +14,7 @@ $ cat helloworld.jsh
 /open PRINTING
 println(“Hello world”)
 /exit
+
 $ jshell helloworld.jsh
 Hello world
 ```
@@ -27,6 +27,7 @@ Alternatively, the Nashorn javascript engine included with the JDK can be used f
 ```
 $ cat jjs.js
 print(“Hello world”);
+
 $ jjs jjs.js
 Hello world
 ```
