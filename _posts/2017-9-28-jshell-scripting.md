@@ -20,7 +20,7 @@ Hello world
 ```
 Note that `/open PRINTING` imports methods like `print` and `printf` without requiring the `System.out` prefix. By default, many classes in the standard library are automatically imported (try executing `/imports` in a console). The print statement does not require a semicolon, and the script ends with the `/exit` command.
 
-Unfortunately, the depth of feature in JShell severely hinders its startup performance. On my 2015 Macbook pro, the above script takes over 7 seconds. Hopefully, features like Ahead of Time compilation or Class Data Sharing will improve speeds.
+Unfortunately, the depth of features in JShell severely hinders its startup performance. On my 2015 Macbook Pro, the above script takes over 7 seconds. Hopefully, features like Ahead of Time compilation or Class Data Sharing will improve speeds.
 
 Alternatively, the Nashorn javascript engine included with the JDK can be used for scripting. Able to access nearly all of the Java standard library, Nashorn also executes faster, taking less than a second for hello-world:
 
