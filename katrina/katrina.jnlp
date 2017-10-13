@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp spec="6.0" xmlns:jfx="http://javafx.com" codebase="http://august.nagro.us/katrina" href="http://august.nagro.us/katrina/katrina.jnlp" version="0.0.1">
+    <information>
+        <title>Katrina</title>
+        <vendor>August Nagro</vendor>
+        <homepage href="http://august.nagro.us"/>
+        <description>Semantic Social Media Analysis</description>
+        <icon href="/icon.png" />
+        <offline-allowed/>
+        <shortcut online="false" install="true">
+            <desktop/>
+        </shortcut>
+    </information>
+    <security>
+        <sandbox/>
+    </security>
+    <resources>
+        <java version="9+"/>
+        <jar href="http://august.nagro.us/katrina/katrina.jar" version="0.0.1"/>
+        <!--<property name="jnlp.packEnabled" value="true"/>-->
+        <property name="jnlp.versionEnabled" value="true"/>
+    </resources>
+    <jfx:javafx-desc main-class="katrina.Launcher" name="Katrina"/>
+    <update check="background" policy="always"/>
+</jnlp>
