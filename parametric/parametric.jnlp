@@ -14,7 +14,7 @@
         </shortcut>
     </information>
     <resources>
-        <java version="1.8+" href="https://www.java.com" />
+        <java version="1.8+"/>
         <jar href="parametric.jar" version="1.0.0"/>
         <property name="jnlp.versionEnabled" value="true"/>
     </resources>
