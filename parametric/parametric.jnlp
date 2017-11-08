@@ -3,10 +3,10 @@
     <information>
         <title>Parametric Demo</title>
         <vendor>August Nagro</vendor>
-        <homepage href="/index.html"/>
+        <homepage href="http://august.nagro.us/parametric/"/>
         <description>Paints the transcendental butterfly curve</description>
-        <icon kind="shortcut" href="icon.png"/>
-        <icon kind="splash" href="splash.png"/>
+        <icon kind="shortcut" href="http://august.nagro.us/parametric/icon.png"/>
+        <icon kind="splash" href="http://august.nagro.us/parametric/splash.png"/>
         <offline-allowed/>
         <shortcut online="false" install="true">
             <menu/>
@@ -15,7 +15,7 @@
     </information>
     <resources>
         <java version="1.8+" href="https://www.java.com" />
-        <jar href="parametric.jar" version="1.0.0"/>
+        <jar href="http://august.nagro.us/parametric/parametric.jar" version="1.0.0"/>
         <property name="jnlp.versionEnabled" value="true"/>
     </resources>
     <jfx:javafx-desc main-class="Launcher" name="Parametric Demo"/>
