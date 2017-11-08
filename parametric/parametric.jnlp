@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<jnlp spec="7.0+" xmlns:jfx="http://javafx.com" codebase="http://august.nagro.us/parametric" href="parametric.jnlp" version="1.0.0">
+<jnlp spec="7.0+" xmlns:jfx="http://javafx.com" codebase="http://august.nagro.us/parametric" href="http://august.nagro.us/parametric/parametric.jnlp" version="1.0.0">
     <information>
         <title>Parametric Demo</title>
         <vendor>August Nagro</vendor>
