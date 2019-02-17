@@ -6,7 +6,7 @@ date: 2017-6-9
 
 The JVM's Achilles heel is long startup times. This is especially true for Scala programs, which require megabytes of additional jars on the classpath. On my 2015 i5 8gb ram Macbook Pro with Scala 2.12.2 and Java 8, the following takes over one second to execute:
 
-```
+{% highlight bash %}
 $ cat S.scala
 object S { def main(args: Array[String]): Unit = println("hello world") }
 
@@ -16,9 +16,9 @@ hello world
 real  0m1.107s
 user  0m0.953s
 sys   0m0.106s
-```
+{% endhighlight %}
 An equivalent C program is nearly instantaneous:
-```
+{% highlight bash %}
 $ cat C.cpp 
 #include <stdio.h>
 
@@ -34,9 +34,9 @@ hello world
 real  0m0.004s
 user  0m0.001s
 sys   0m0.001s
-```
+{% endhighlight %}
 Python is also much faster:
-```
+{% highlight bash %}
 $ cat P.py 
 print("hello world")
 
@@ -46,13 +46,13 @@ hello world
 real  0m0.029s
 user  0m0.015s
 sys   0m0.009s
-```
+{% endhighlight %}
 
 Using `time` is not a scientific means of benchmarking, but is illustrative enough to show Scala's handicap. Being a common frustration of the world's most engineered virtual machine, significant effort has been invested in mechanisms to lower coldstart numbers. These include JVM features like Class Data Sharing (CDS), AppCDS, Modular Runtime Images, Ahead of Time Compilation, and third party devlopments such as Scala Native and Nailgun. 
 
 But first, startup time can be improved using the tools provided. A simple speedup is compiling `S.scala` beforehand:
 
-```
+{% highlight bash %}
 $ scalac S.scala
 
 $ time scala S
@@ -61,11 +61,11 @@ hello world
 real  0m0.741s
 user  0m0.866s
 sys   0m0.097s
-```
+{% endhighlight %}
 
 Packaging the class in a jar yields similar execution time:
 
-```
+{% highlight bash %}
 cds $ scalac S.scala -d s.jar
 
 cds $ time scala s.jar
@@ -81,11 +81,11 @@ hello world
 real  0m0.747s
 user  0m0.869s
 sys   0m0.102s
-```
+{% endhighlight %}
 
 It turns out that the `scala` script calls java with every library in $SCALA_HOME/lib on the classpath. This includes libraries like `scala-compiler.jar` and `scala-reflect.jar`, totaling 20MB. That's a lot for the JVM to load on every startup.
 
-```
+{% highlight bash %}
 $ du -hs /usr/local/Cellar/scala/2.12.2/libexec/lib/
  20M	/usr/local/Cellar/scala/2.12.2/libexec/lib/
 $ du -hs /usr/local/Cellar/scala/2.12.2/libexec/lib/*
@@ -97,17 +97,17 @@ $ du -hs /usr/local/Cellar/scala/2.12.2/libexec/lib/*
 720K	/usr/local/Cellar/scala/2.12.2/libexec/lib/scala-swing_2.12-2.0.0.jar
 536K	/usr/local/Cellar/scala/2.12.2/libexec/lib/scala-xml_2.12-1.0.6.jar
 500K	/usr/local/Cellar/scala/2.12.2/libexec/lib/scalap-2.12.2.jar
-```
+{% endhighlight %}
 As the hello world example only requires `scala-library.jar`, including just this archive on the classpath begets significant improvement:
 
-```
+{% highlight bash %}
 $ time java -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
 hello world
 
 real  0m0.464s
 user  0m0.557s
 sys   0m0.053s
-```
+{% endhighlight %}
 
 ## CDS
 
@@ -115,7 +115,7 @@ sys   0m0.053s
 
 CDS is enabled 'whenever possible', but my installation required regenerating the shared archive:
 
-```
+{% highlight bash %}
 $ java -Xshare:on
 An error has occurred while processing the shared archive file.
 Specified shared archive not found.
@@ -165,27 +165,27 @@ rw space:   8935272 [ 55.7% of total] out of  16777216 bytes [53.3% used] at 0x0
 md space:   1400192 [  8.7% of total] out of   4194304 bytes [33.4% used] at 0x0000000802000000
 mc space:     34053 [  0.2% of total] out of    122880 bytes [27.7% used] at 0x0000000802400000
 total   :  16049109 [100.0% of total] out of  37871616 bytes [42.4% used]
-```
+{% endhighlight %}
 
 Using CDS has very little impact:
 
-```
+{% highlight bash %}
 $ time java -Xshare:on -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
 hello world
 
 real  0m0.447s
 user  0m0.545s
 sys   0m0.053s
-```
+{% endhighlight %}
 
-```
+{% highlight bash %}
 time java -client -XX:+UseSerialGC -Xshare:on -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
 hello world
 
 real  0m0.436s
 user  0m0.532s
 sys   0m0.050s
-```
+{% endhighlight %}
 
 ## AppCDS
 
@@ -193,18 +193,18 @@ sys   0m0.050s
 
 Following the guide we create `s.classlist`:
 
-```
+{% highlight bash %}
 $ java -Xshare:off -XX:+UnlockCommercialFeatures -XX:DumpLoadedClassList=s.classlist \
 -XX:+UseAppCDS -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
-```
+{% endhighlight %}
 Use it to generate a custom `s.jsa` cache,
-```
+{% highlight bash %}
 $ java -XX:+UnlockCommercialFeatures -Xshare:dump -XX:+UseAppCDS \
 -XX:SharedArchiveFile=s.jsa -XX:SharedClassListFile=s.classlist \
 -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar
-```
+{% endhighlight %}
 And then run with the archive:
-```
+{% highlight bash %}
 $ time java -XX:+UnlockCommercialFeatures -Xshare:on -XX:+UseAppCDS \
 -XX:SharedArchiveFile=s.jsa \
 -cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar:s.jar S
@@ -213,7 +213,7 @@ hello world
 real  0m0.173s
 user  0m0.226s
 sys   0m0.035s
-```
+{% endhighlight %}
 A big improvement.
 
 ## Modular Runtime Images
@@ -221,7 +221,7 @@ A big improvement.
 [Jlink](http://openjdk.java.net/jeps/282) is part of Java 9's Project Jigsaw and builds custom runtime images. Scala doesn't yet support Java 9, so Java sources were used.
 
 With the compiled `Main.java`, startup is ~100ms in JDK 8
-```
+{% highlight bash %}
 $ cat Main.scala
 public class Main {
   public static void main(String[] args) {
@@ -234,9 +234,9 @@ hello world
 real  0m0.096s
 user  0m0.073s
 sys   0m0.022s
-```
+{% endhighlight %}
 After switching to JDK9 and building a jre image:
-```
+{% highlight bash %}
 $ jlink --module-path $JAVA_HOME/jmods:mlib --add-modules com.greetings \
 --output greetingapp --launcher
 
@@ -246,31 +246,31 @@ Greetings!
 real  0m0.202s
 user  0m0.092s
 sys   0m0.039s
-```
+{% endhighlight %}
 Quite a bit [slower](https://stackoverflow.com/questions/35180051/is-there-startup-time-regression-in-java-9-ea). The custom jre is very small, though:
-```
+{% highlight bash %}
 $ du -hs greetingapp/
 35MB	greetingapp/
-```
+{% endhighlight %}
 My java 8 jre folder is 178MB.
 
 ## Nailgun
 
 Avoiding startup time completly is possible with [Nailgun](http://martiansoftware.com/nailgun/). Start a background server with:
 
-```
+{% highlight bash %}
 $ brew install nailgun
 $ java -jar /usr/local/Cellar/nailgun/0.9.1/libexec/nailgun-server-0.9.1.jar 
 NGServer 0.9.1 started on all interfaces, port 2113.
-```
+{% endhighlight %}
 Add the required jars
 
-```
+{% highlight bash %}
 $ ng ng-cp /usr/local/Cellar/scala/2.12.2/libexec/lib/scala-library.jar
 $ ng ng-cp s.jar
-```
+{% endhighlight %}
 And after the first run (in which the jars are loaded) execution rivals C:
-```
+{% highlight bash %}
 $ ng S
 hello world
 $ time ng S
@@ -279,7 +279,7 @@ hello world
 real  0m0.006s
 user  0m0.001s
 sys   0m0.002s
-```
+{% endhighlight %}
 
 This is by far the fastest method on the JVM. Nailgun is partially responsible for the incredibly fast compile times of [CBT (Chris's Build Tool)](https://github.com/cvogt/cbt).
 
@@ -289,7 +289,7 @@ This is by far the fastest method on the JVM. Nailgun is partially responsible f
 
 ## Update 6 August 2017:
 It's also possible to improve startup time by removing usage of Scala's standard library. In this case `scala.Predef.println` was replaced with `System.out.println`:
-```
+{% highlight bash %}
 $ cat Main.scala 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -303,5 +303,5 @@ Hello World
 real  0m0.093s
 user  0m0.072s
 sys   0m0.021s
-```
+{% endhighlight %}
 To keep convenience methods like `println`, consider [this article](http://august.nagro.us/removing-scala-predef.html)
