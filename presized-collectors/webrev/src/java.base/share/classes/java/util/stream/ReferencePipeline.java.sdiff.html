@@ -1,0 +1,297 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff src/java.base/share/classes/java/util/stream </title>
+</head><body id="SUNWwebrev">
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> next &gt</center>
+<h2>src/java.base/share/classes/java/util/stream/ReferencePipeline.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+ 553         return evaluate(ReduceOps.makeRef(identity, accumulator, accumulator));
+ 554     }
+ 555 
+ 556     @Override
+ 557     public final Optional&lt;P_OUT&gt; reduce(BinaryOperator&lt;P_OUT&gt; accumulator) {
+ 558         return evaluate(ReduceOps.makeRef(accumulator));
+ 559     }
+ 560 
+ 561     @Override
+ 562     public final &lt;R&gt; R reduce(R identity, BiFunction&lt;R, ? super P_OUT, R&gt; accumulator, BinaryOperator&lt;R&gt; combiner) {
+ 563         return evaluate(ReduceOps.makeRef(identity, accumulator, combiner));
+ 564     }
+ 565 
+ 566     @Override
+ 567     @SuppressWarnings("unchecked")
+ 568     public final &lt;R, A&gt; R collect(Collector&lt;? super P_OUT, A, R&gt; collector) {
+ 569         A container;
+ 570         if (isParallel()
+ 571                 &amp;&amp; (collector.characteristics().contains(Collector.Characteristics.CONCURRENT))
+ 572                 &amp;&amp; (!isOrdered() || collector.characteristics().contains(Collector.Characteristics.UNORDERED))) {
+<span class="changed"> 573             container = collector.supplier().get();</span>
+<span class="changed"> 574             BiConsumer&lt;A, ? super P_OUT&gt; accumulator = collector.accumulator();</span>
+<span class="changed"> 575             forEach(u -&gt; accumulator.accept(container, u));</span>
+ 576         }
+ 577         else {
+ 578             container = evaluate(ReduceOps.makeRef(collector));
+ 579         }
+ 580         return collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)
+ 581                ? (R) container
+ 582                : collector.finisher().apply(container);
+ 583     }
+ 584 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 585     @Override
+ 586     public final &lt;R&gt; R collect(Supplier&lt;R&gt; supplier,
+ 587                                BiConsumer&lt;R, ? super P_OUT&gt; accumulator,
+ 588                                BiConsumer&lt;R, R&gt; combiner) {
+ 589         return evaluate(ReduceOps.makeRef(supplier, accumulator, combiner));
+ 590     }
+ 591 
+ 592     @Override
+ 593     public final Optional&lt;P_OUT&gt; max(Comparator&lt;? super P_OUT&gt; comparator) {
+ 594         return reduce(BinaryOperator.maxBy(comparator));
+ 595     }
+ 596 
+ 597     @Override
+ 598     public final Optional&lt;P_OUT&gt; min(Comparator&lt;? super P_OUT&gt; comparator) {
+ 599         return reduce(BinaryOperator.minBy(comparator));
+ 600 
+ 601     }
+ 602 
+ 603     @Override
+ 604     public final long count() {
+
+</pre><hr></hr>
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+ 553         return evaluate(ReduceOps.makeRef(identity, accumulator, accumulator));
+ 554     }
+ 555 
+ 556     @Override
+ 557     public final Optional&lt;P_OUT&gt; reduce(BinaryOperator&lt;P_OUT&gt; accumulator) {
+ 558         return evaluate(ReduceOps.makeRef(accumulator));
+ 559     }
+ 560 
+ 561     @Override
+ 562     public final &lt;R&gt; R reduce(R identity, BiFunction&lt;R, ? super P_OUT, R&gt; accumulator, BinaryOperator&lt;R&gt; combiner) {
+ 563         return evaluate(ReduceOps.makeRef(identity, accumulator, combiner));
+ 564     }
+ 565 
+ 566     @Override
+ 567     @SuppressWarnings("unchecked")
+ 568     public final &lt;R, A&gt; R collect(Collector&lt;? super P_OUT, A, R&gt; collector) {
+ 569         A container;
+ 570         if (isParallel()
+ 571                 &amp;&amp; (collector.characteristics().contains(Collector.Characteristics.CONCURRENT))
+ 572                 &amp;&amp; (!isOrdered() || collector.characteristics().contains(Collector.Characteristics.UNORDERED))) {
+<span class="changed"> 573             container = evaluate(new UnorderedConcurrentCollectorOp&lt;&gt;(collector));</span>
+
+
+ 574         }
+ 575         else {
+ 576             container = evaluate(ReduceOps.makeRef(collector));
+ 577         }
+ 578         return collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)
+ 579                ? (R) container
+ 580                : collector.finisher().apply(container);
+ 581     }
+ 582 
+<span class="new"> 583     /**</span>
+<span class="new"> 584      * A TerminalOp for unordered, concurrent collectors. The semantics are</span>
+<span class="new"> 585      * very similar to ForEachOp, except presizing is supported and the</span>
+<span class="new"> 586      * intermediary Collector accumulation type is made accessible.</span>
+<span class="new"> 587      *</span>
+<span class="new"> 588      * @param &lt;T&gt; The Collector's input element type</span>
+<span class="new"> 589      * @param &lt;A&gt; The Collector's mutable accumulation type</span>
+<span class="new"> 590      */</span>
+<span class="new"> 591     static final class UnorderedConcurrentCollectorOp&lt;T, A&gt; implements TerminalOp&lt;T, A&gt;, TerminalSink&lt;T, A&gt; {</span>
+<span class="new"> 592         final Collector&lt;? super T, A, ?&gt; collector;</span>
+<span class="new"> 593         final BiConsumer&lt;A, ? super T&gt; accumulator;</span>
+<span class="new"> 594 </span>
+<span class="new"> 595         A res;</span>
+<span class="new"> 596 </span>
+<span class="new"> 597         UnorderedConcurrentCollectorOp(Collector&lt;? super T, A, ?&gt; collector) {</span>
+<span class="new"> 598             this.collector = collector;</span>
+<span class="new"> 599             this.accumulator = collector.accumulator();</span>
+<span class="new"> 600         }</span>
+<span class="new"> 601 </span>
+<span class="new"> 602         @Override</span>
+<span class="new"> 603         public A get() {</span>
+<span class="new"> 604             return res;</span>
+<span class="new"> 605         }</span>
+<span class="new"> 606 </span>
+<span class="new"> 607         @Override</span>
+<span class="new"> 608         public void accept(T t) {</span>
+<span class="new"> 609             accumulator.accept(res, t);</span>
+<span class="new"> 610         }</span>
+<span class="new"> 611 </span>
+<span class="new"> 612         @Override</span>
+<span class="new"> 613         public &lt;P_IN&gt; A evaluateSequential(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {</span>
+<span class="new"> 614             throw new IllegalStateException("Cannot evaluate UnorderedConcurrentCollectorOp sequentially");</span>
+<span class="new"> 615         }</span>
+<span class="new"> 616 </span>
+<span class="new"> 617         @Override</span>
+<span class="new"> 618         public &lt;P_IN&gt; A evaluateParallel(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {</span>
+<span class="new"> 619             long size;</span>
+<span class="new"> 620             if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)</span>
+<span class="new"> 621                 res = collector.sizedSupplier().apply((int) size);</span>
+<span class="new"> 622             else</span>
+<span class="new"> 623                 res = collector.supplier().get();</span>
+<span class="new"> 624             new ForEachOps.ForEachTask&lt;&gt;(helper, spliterator, helper.wrapSink(this)).invoke();</span>
+<span class="new"> 625             return res;</span>
+<span class="new"> 626         }</span>
+<span class="new"> 627     }</span>
+<span class="new"> 628 </span>
+ 629     @Override
+ 630     public final &lt;R&gt; R collect(Supplier&lt;R&gt; supplier,
+ 631                                BiConsumer&lt;R, ? super P_OUT&gt; accumulator,
+ 632                                BiConsumer&lt;R, R&gt; combiner) {
+ 633         return evaluate(ReduceOps.makeRef(supplier, accumulator, combiner));
+ 634     }
+ 635 
+ 636     @Override
+ 637     public final Optional&lt;P_OUT&gt; max(Comparator&lt;? super P_OUT&gt; comparator) {
+ 638         return reduce(BinaryOperator.maxBy(comparator));
+ 639     }
+ 640 
+ 641     @Override
+ 642     public final Optional&lt;P_OUT&gt; min(Comparator&lt;? super P_OUT&gt; comparator) {
+ 643         return reduce(BinaryOperator.minBy(comparator));
+ 644 
+ 645     }
+ 646 
+ 647     @Override
+ 648     public final long count() {
+
+</pre><hr></hr>
+</pre></td>
+</tr></table>
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReduceOps.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> next &gt</center>
+</body></html>

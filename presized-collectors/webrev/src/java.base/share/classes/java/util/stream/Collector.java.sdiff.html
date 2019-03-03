@@ -1,0 +1,565 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff src/java.base/share/classes/java/util/stream </title>
+</head><body id="SUNWwebrev">
+<center>&lt prev <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.sdiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/share/classes/java/util/stream/Collector.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+  11  * This code is distributed in the hope that it will be useful, but WITHOUT
+  12  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  13  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  14  * version 2 for more details (a copy is included in the LICENSE file that
+  15  * accompanied this code).
+  16  *
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 package java.util.stream;
+  26 
+  27 import java.util.Collections;
+  28 import java.util.EnumSet;
+  29 import java.util.Objects;
+  30 import java.util.Set;
+<span class="changed">  31 import java.util.function.BiConsumer;</span>
+<span class="changed">  32 import java.util.function.BinaryOperator;</span>
+<span class="changed">  33 import java.util.function.Function;</span>
+<span class="changed">  34 import java.util.function.Supplier;</span>
+  35 
+  36 /**
+  37  * A &lt;a href="package-summary.html#Reduction"&gt;mutable reduction operation&lt;/a&gt; that
+  38  * accumulates input elements into a mutable result container, optionally transforming
+  39  * the accumulated result into a final representation after all input elements
+  40  * have been processed.  Reduction operations can be performed either sequentially
+  41  * or in parallel.
+  42  *
+  43  * &lt;p&gt;Examples of mutable reduction operations include:
+  44  * accumulating elements into a {@code Collection}; concatenating
+  45  * strings using a {@code StringBuilder}; computing summary information about
+  46  * elements such as sum, min, max, or average; computing "pivot table" summaries
+  47  * such as "maximum valued transaction by seller", etc.  The class {@link Collectors}
+  48  * provides implementations of many common mutable reductions.
+  49  *
+  50  * &lt;p&gt;A {@code Collector} is specified by four functions that work together to
+  51  * accumulate entries into a mutable result container, and optionally perform
+  52  * a final transform on the result.  They are: &lt;ul&gt;
+  53  *     &lt;li&gt;creation of a new result container ({@link #supplier()})&lt;/li&gt;
+  54  *     &lt;li&gt;incorporating a new data element into a result container ({@link #accumulator()})&lt;/li&gt;
+
+</pre><hr></hr><pre>
+ 186  * }&lt;/pre&gt;
+ 187  *
+ 188  * @see Stream#collect(Collector)
+ 189  * @see Collectors
+ 190  *
+ 191  * @param &lt;T&gt; the type of input elements to the reduction operation
+ 192  * @param &lt;A&gt; the mutable accumulation type of the reduction operation (often
+ 193  *            hidden as an implementation detail)
+ 194  * @param &lt;R&gt; the result type of the reduction operation
+ 195  * @since 1.8
+ 196  */
+ 197 public interface Collector&lt;T, A, R&gt; {
+ 198     /**
+ 199      * A function that creates and returns a new mutable result container.
+ 200      *
+ 201      * @return a function which returns a new, mutable result container
+ 202      */
+ 203     Supplier&lt;A&gt; supplier();
+ 204 
+ 205     /**
+
+
+
+
+
+
+
+
+
+
+ 206      * A function that folds a value into a mutable result container.
+ 207      *
+ 208      * @return a function which folds a value into a mutable result container
+ 209      */
+ 210     BiConsumer&lt;A, T&gt; accumulator();
+ 211 
+ 212     /**
+ 213      * A function that accepts two partial results and merges them.  The
+ 214      * combiner function may fold state from one argument into the other and
+ 215      * return that, or may return a new result container.
+ 216      *
+ 217      * @return a function which combines two partial results into a combined
+ 218      * result
+ 219      */
+ 220     BinaryOperator&lt;A&gt; combiner();
+ 221 
+ 222     /**
+ 223      * Perform the final transformation from the intermediate accumulation type
+ 224      * {@code A} to the final result type {@code R}.
+ 225      *
+
+</pre><hr></hr><pre>
+ 244      * Returns a new {@code Collector} described by the given {@code supplier},
+ 245      * {@code accumulator}, and {@code combiner} functions.  The resulting
+ 246      * {@code Collector} has the {@code Collector.Characteristics.IDENTITY_FINISH}
+ 247      * characteristic.
+ 248      *
+ 249      * @param supplier The supplier function for the new collector
+ 250      * @param accumulator The accumulator function for the new collector
+ 251      * @param combiner The combiner function for the new collector
+ 252      * @param characteristics The collector characteristics for the new
+ 253      *                        collector
+ 254      * @param &lt;T&gt; The type of input elements for the new collector
+ 255      * @param &lt;R&gt; The type of intermediate accumulation result, and final result,
+ 256      *           for the new collector
+ 257      * @throws NullPointerException if any argument is null
+ 258      * @return the new {@code Collector}
+ 259      */
+ 260     public static&lt;T, R&gt; Collector&lt;T, R, R&gt; of(Supplier&lt;R&gt; supplier,
+ 261                                               BiConsumer&lt;R, T&gt; accumulator,
+ 262                                               BinaryOperator&lt;R&gt; combiner,
+ 263                                               Characteristics... characteristics) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 264         Objects.requireNonNull(supplier);
+ 265         Objects.requireNonNull(accumulator);
+ 266         Objects.requireNonNull(combiner);
+ 267         Objects.requireNonNull(characteristics);
+ 268         Set&lt;Characteristics&gt; cs = (characteristics.length == 0)
+ 269                                   ? Collectors.CH_ID
+ 270                                   : Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH,
+ 271                                                                            characteristics));
+<span class="changed"> 272         return new Collectors.CollectorImpl&lt;&gt;(supplier, accumulator, combiner, cs);</span>
+ 273     }
+ 274 
+ 275     /**
+ 276      * Returns a new {@code Collector} described by the given {@code supplier},
+ 277      * {@code accumulator}, {@code combiner}, and {@code finisher} functions.
+ 278      *
+
+ 279      * @param supplier The supplier function for the new collector
+ 280      * @param accumulator The accumulator function for the new collector
+ 281      * @param combiner The combiner function for the new collector
+ 282      * @param finisher The finisher function for the new collector
+ 283      * @param characteristics The collector characteristics for the new
+ 284      *                        collector
+ 285      * @param &lt;T&gt; The type of input elements for the new collector
+ 286      * @param &lt;A&gt; The intermediate accumulation type of the new collector
+ 287      * @param &lt;R&gt; The final result type of the new collector
+ 288      * @throws NullPointerException if any argument is null
+ 289      * @return the new {@code Collector}
+ 290      */
+<span class="changed"> 291     public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(Supplier&lt;A&gt; supplier,</span>
+
+ 292                                                  BiConsumer&lt;A, T&gt; accumulator,
+ 293                                                  BinaryOperator&lt;A&gt; combiner,
+ 294                                                  Function&lt;A, R&gt; finisher,
+ 295                                                  Characteristics... characteristics) {
+
+ 296         Objects.requireNonNull(supplier);
+ 297         Objects.requireNonNull(accumulator);
+ 298         Objects.requireNonNull(combiner);
+ 299         Objects.requireNonNull(finisher);
+ 300         Objects.requireNonNull(characteristics);
+ 301         Set&lt;Characteristics&gt; cs = Collectors.CH_NOID;
+ 302         if (characteristics.length &gt; 0) {
+ 303             cs = EnumSet.noneOf(Characteristics.class);
+ 304             Collections.addAll(cs, characteristics);
+ 305             cs = Collections.unmodifiableSet(cs);
+ 306         }
+<span class="changed"> 307         return new Collectors.CollectorImpl&lt;&gt;(supplier, accumulator, combiner, finisher, cs);</span>
+ 308     }
+ 309 
+ 310     /**
+ 311      * Characteristics indicating properties of a {@code Collector}, which can
+ 312      * be used to optimize reduction implementations.
+ 313      */
+ 314     enum Characteristics {
+ 315         /**
+ 316          * Indicates that this collector is &lt;em&gt;concurrent&lt;/em&gt;, meaning that
+ 317          * the result container can support the accumulator function being
+ 318          * called concurrently with the same result container from multiple
+ 319          * threads.
+ 320          *
+ 321          * &lt;p&gt;If a {@code CONCURRENT} collector is not also {@code UNORDERED},
+ 322          * then it should only be evaluated concurrently if applied to an
+ 323          * unordered data source.
+ 324          */
+ 325         CONCURRENT,
+ 326 
+ 327         /**
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+  11  * This code is distributed in the hope that it will be useful, but WITHOUT
+  12  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  13  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  14  * version 2 for more details (a copy is included in the LICENSE file that
+  15  * accompanied this code).
+  16  *
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 package java.util.stream;
+  26 
+  27 import java.util.Collections;
+  28 import java.util.EnumSet;
+  29 import java.util.Objects;
+  30 import java.util.Set;
+<span class="changed">  31 import java.util.function.*;</span>
+
+
+
+  32 
+  33 /**
+  34  * A &lt;a href="package-summary.html#Reduction"&gt;mutable reduction operation&lt;/a&gt; that
+  35  * accumulates input elements into a mutable result container, optionally transforming
+  36  * the accumulated result into a final representation after all input elements
+  37  * have been processed.  Reduction operations can be performed either sequentially
+  38  * or in parallel.
+  39  *
+  40  * &lt;p&gt;Examples of mutable reduction operations include:
+  41  * accumulating elements into a {@code Collection}; concatenating
+  42  * strings using a {@code StringBuilder}; computing summary information about
+  43  * elements such as sum, min, max, or average; computing "pivot table" summaries
+  44  * such as "maximum valued transaction by seller", etc.  The class {@link Collectors}
+  45  * provides implementations of many common mutable reductions.
+  46  *
+  47  * &lt;p&gt;A {@code Collector} is specified by four functions that work together to
+  48  * accumulate entries into a mutable result container, and optionally perform
+  49  * a final transform on the result.  They are: &lt;ul&gt;
+  50  *     &lt;li&gt;creation of a new result container ({@link #supplier()})&lt;/li&gt;
+  51  *     &lt;li&gt;incorporating a new data element into a result container ({@link #accumulator()})&lt;/li&gt;
+
+</pre><hr></hr><pre>
+ 183  * }&lt;/pre&gt;
+ 184  *
+ 185  * @see Stream#collect(Collector)
+ 186  * @see Collectors
+ 187  *
+ 188  * @param &lt;T&gt; the type of input elements to the reduction operation
+ 189  * @param &lt;A&gt; the mutable accumulation type of the reduction operation (often
+ 190  *            hidden as an implementation detail)
+ 191  * @param &lt;R&gt; the result type of the reduction operation
+ 192  * @since 1.8
+ 193  */
+ 194 public interface Collector&lt;T, A, R&gt; {
+ 195     /**
+ 196      * A function that creates and returns a new mutable result container.
+ 197      *
+ 198      * @return a function which returns a new, mutable result container
+ 199      */
+ 200     Supplier&lt;A&gt; supplier();
+ 201 
+ 202     /**
+<span class="new"> 203      * A function that creates and returns a new mutable result container,</span>
+<span class="new"> 204      * when applied with an initial capacity.</span>
+<span class="new"> 205      *</span>
+<span class="new"> 206      * @return a function which returns a new, mutable result container</span>
+<span class="new"> 207      */</span>
+<span class="new"> 208     default IntFunction&lt;A&gt; sizedSupplier() {</span>
+<span class="new"> 209         return ignored -&gt; supplier().get();</span>
+<span class="new"> 210     }</span>
+<span class="new"> 211 </span>
+<span class="new"> 212     /**</span>
+ 213      * A function that folds a value into a mutable result container.
+ 214      *
+ 215      * @return a function which folds a value into a mutable result container
+ 216      */
+ 217     BiConsumer&lt;A, T&gt; accumulator();
+ 218 
+ 219     /**
+ 220      * A function that accepts two partial results and merges them.  The
+ 221      * combiner function may fold state from one argument into the other and
+ 222      * return that, or may return a new result container.
+ 223      *
+ 224      * @return a function which combines two partial results into a combined
+ 225      * result
+ 226      */
+ 227     BinaryOperator&lt;A&gt; combiner();
+ 228 
+ 229     /**
+ 230      * Perform the final transformation from the intermediate accumulation type
+ 231      * {@code A} to the final result type {@code R}.
+ 232      *
+
+</pre><hr></hr><pre>
+ 251      * Returns a new {@code Collector} described by the given {@code supplier},
+ 252      * {@code accumulator}, and {@code combiner} functions.  The resulting
+ 253      * {@code Collector} has the {@code Collector.Characteristics.IDENTITY_FINISH}
+ 254      * characteristic.
+ 255      *
+ 256      * @param supplier The supplier function for the new collector
+ 257      * @param accumulator The accumulator function for the new collector
+ 258      * @param combiner The combiner function for the new collector
+ 259      * @param characteristics The collector characteristics for the new
+ 260      *                        collector
+ 261      * @param &lt;T&gt; The type of input elements for the new collector
+ 262      * @param &lt;R&gt; The type of intermediate accumulation result, and final result,
+ 263      *           for the new collector
+ 264      * @throws NullPointerException if any argument is null
+ 265      * @return the new {@code Collector}
+ 266      */
+ 267     public static&lt;T, R&gt; Collector&lt;T, R, R&gt; of(Supplier&lt;R&gt; supplier,
+ 268                                               BiConsumer&lt;R, T&gt; accumulator,
+ 269                                               BinaryOperator&lt;R&gt; combiner,
+ 270                                               Characteristics... characteristics) {
+<span class="new"> 271         return of(ignored -&gt; supplier.get(), supplier, accumulator, combiner, characteristics);</span>
+<span class="new"> 272     }</span>
+<span class="new"> 273 </span>
+<span class="new"> 274     /**</span>
+<span class="new"> 275      * Returns a new {@code Collector} described by the given {@code supplier},</span>
+<span class="new"> 276      * {@code accumulator}, {@code combiner}, and {@code finisher} functions.</span>
+<span class="new"> 277      *</span>
+<span class="new"> 278      * @param supplier The supplier function for the new collector</span>
+<span class="new"> 279      * @param accumulator The accumulator function for the new collector</span>
+<span class="new"> 280      * @param combiner The combiner function for the new collector</span>
+<span class="new"> 281      * @param finisher The finisher function for the new collector</span>
+<span class="new"> 282      * @param characteristics The collector characteristics for the new</span>
+<span class="new"> 283      *                        collector</span>
+<span class="new"> 284      * @param &lt;T&gt; The type of input elements for the new collector</span>
+<span class="new"> 285      * @param &lt;A&gt; The intermediate accumulation type of the new collector</span>
+<span class="new"> 286      * @param &lt;R&gt; The final result type of the new collector</span>
+<span class="new"> 287      * @throws NullPointerException if any argument is null</span>
+<span class="new"> 288      * @return the new {@code Collector}</span>
+<span class="new"> 289      */</span>
+<span class="new"> 290     public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(Supplier&lt;A&gt; supplier,</span>
+<span class="new"> 291                                                  BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new"> 292                                                  BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new"> 293                                                  Function&lt;A, R&gt; finisher,</span>
+<span class="new"> 294                                                  Characteristics... characteristics) {</span>
+<span class="new"> 295         return of(ignored -&gt; supplier.get(), supplier, accumulator, combiner, finisher, characteristics);</span>
+<span class="new"> 296     }</span>
+<span class="new"> 297 </span>
+<span class="new"> 298     /**</span>
+<span class="new"> 299      * Returns a new {@code Collector} described by the given {@code supplier},</span>
+<span class="new"> 300      * {@code accumulator}, {@code combiner}, and {@code finisher} functions.</span>
+<span class="new"> 301      *</span>
+<span class="new"> 302      * @param sizedSupplier The sized supplier function for the new collector</span>
+<span class="new"> 303      * @param supplier The supplier function for the new collector</span>
+<span class="new"> 304      * @param accumulator The accumulator function for the new collector</span>
+<span class="new"> 305      * @param combiner The combiner function for the new collector</span>
+<span class="new"> 306      * @param characteristics The collector characteristics for the new</span>
+<span class="new"> 307      *                        collector</span>
+<span class="new"> 308      * @param &lt;T&gt; The type of input elements for the new collector</span>
+<span class="new"> 309      * @param &lt;A&gt; The intermediate accumulation type of the new collector</span>
+<span class="new"> 310      * @param &lt;R&gt; The final result type of the new collector</span>
+<span class="new"> 311      * @throws NullPointerException if any argument is null</span>
+<span class="new"> 312      * @return the new {@code Collector}</span>
+<span class="new"> 313      */</span>
+<span class="new"> 314     public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="new"> 315                                                  Supplier&lt;A&gt; supplier,</span>
+<span class="new"> 316                                                  BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new"> 317                                                  BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new"> 318                                                  Characteristics... characteristics) {</span>
+<span class="new"> 319         Objects.requireNonNull(sizedSupplier);</span>
+ 320         Objects.requireNonNull(supplier);
+ 321         Objects.requireNonNull(accumulator);
+ 322         Objects.requireNonNull(combiner);
+ 323         Objects.requireNonNull(characteristics);
+ 324         Set&lt;Characteristics&gt; cs = (characteristics.length == 0)
+ 325                                   ? Collectors.CH_ID
+ 326                                   : Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH,
+ 327                                                                            characteristics));
+<span class="changed"> 328         return new Collectors.CollectorImpl&lt;&gt;(sizedSupplier, supplier, accumulator, combiner, cs);</span>
+ 329     }
+ 330 
+ 331     /**
+ 332      * Returns a new {@code Collector} described by the given {@code supplier},
+ 333      * {@code accumulator}, {@code combiner}, and {@code finisher} functions.
+ 334      *
+<span class="new"> 335      * @param sizedSupplier The sized supplier function for the new collector</span>
+ 336      * @param supplier The supplier function for the new collector
+ 337      * @param accumulator The accumulator function for the new collector
+ 338      * @param combiner The combiner function for the new collector
+ 339      * @param finisher The finisher function for the new collector
+ 340      * @param characteristics The collector characteristics for the new
+ 341      *                        collector
+ 342      * @param &lt;T&gt; The type of input elements for the new collector
+ 343      * @param &lt;A&gt; The intermediate accumulation type of the new collector
+ 344      * @param &lt;R&gt; The final result type of the new collector
+ 345      * @throws NullPointerException if any argument is null
+ 346      * @return the new {@code Collector}
+ 347      */
+<span class="changed"> 348     public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="changed"> 349                                                  Supplier&lt;A&gt; supplier,</span>
+ 350                                                  BiConsumer&lt;A, T&gt; accumulator,
+ 351                                                  BinaryOperator&lt;A&gt; combiner,
+ 352                                                  Function&lt;A, R&gt; finisher,
+ 353                                                  Characteristics... characteristics) {
+<span class="new"> 354         Objects.requireNonNull(sizedSupplier);</span>
+ 355         Objects.requireNonNull(supplier);
+ 356         Objects.requireNonNull(accumulator);
+ 357         Objects.requireNonNull(combiner);
+ 358         Objects.requireNonNull(finisher);
+ 359         Objects.requireNonNull(characteristics);
+ 360         Set&lt;Characteristics&gt; cs = Collectors.CH_NOID;
+ 361         if (characteristics.length &gt; 0) {
+ 362             cs = EnumSet.noneOf(Characteristics.class);
+ 363             Collections.addAll(cs, characteristics);
+ 364             cs = Collections.unmodifiableSet(cs);
+ 365         }
+<span class="changed"> 366         return new Collectors.CollectorImpl&lt;&gt;(sizedSupplier, supplier, accumulator, combiner, finisher, cs);</span>
+ 367     }
+ 368 
+ 369     /**
+ 370      * Characteristics indicating properties of a {@code Collector}, which can
+ 371      * be used to optimize reduction implementations.
+ 372      */
+ 373     enum Characteristics {
+ 374         /**
+ 375          * Indicates that this collector is &lt;em&gt;concurrent&lt;/em&gt;, meaning that
+ 376          * the result container can support the accumulator function being
+ 377          * called concurrently with the same result container from multiple
+ 378          * threads.
+ 379          *
+ 380          * &lt;p&gt;If a {@code CONCURRENT} collector is not also {@code UNORDERED},
+ 381          * then it should only be evaluated concurrently if applied to an
+ 382          * unordered data source.
+ 383          */
+ 384         CONCURRENT,
+ 385 
+ 386         /**
+</pre></td>
+</tr></table>
+<center>&lt prev <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.sdiff.html' target='_top'>next &gt</a></center>
+</body></html>

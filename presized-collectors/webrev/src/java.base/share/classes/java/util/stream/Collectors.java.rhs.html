@@ -1,0 +1,2232 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre><hr></hr>
+<pre>
+   1 /*
+   2  * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.  Oracle designates this
+   8  * particular file as subject to the "Classpath" exception as provided
+   9  * by Oracle in the LICENSE file that accompanied this code.
+  10  *
+  11  * This code is distributed in the hope that it will be useful, but WITHOUT
+  12  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  13  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  14  * version 2 for more details (a copy is included in the LICENSE file that
+  15  * accompanied this code).
+  16  *
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 package java.util.stream;
+  26 
+  27 import java.util.AbstractMap;
+  28 import java.util.AbstractSet;
+  29 import java.util.ArrayList;
+  30 import java.util.Collection;
+  31 import java.util.Collections;
+  32 import java.util.Comparator;
+  33 import java.util.DoubleSummaryStatistics;
+  34 import java.util.EnumSet;
+  35 import java.util.HashMap;
+  36 import java.util.HashSet;
+  37 import java.util.IntSummaryStatistics;
+  38 import java.util.Iterator;
+  39 import java.util.List;
+  40 import java.util.LongSummaryStatistics;
+  41 import java.util.Map;
+  42 import java.util.Objects;
+  43 import java.util.Optional;
+  44 import java.util.Set;
+  45 import java.util.StringJoiner;
+  46 import java.util.concurrent.ConcurrentHashMap;
+  47 import java.util.concurrent.ConcurrentMap;
+<a name="1" id="anc1"></a><span class="changed">  48 import java.util.function.*;</span>
+
+
+
+
+
+
+
+
+
+  49 
+  50 /**
+  51  * Implementations of {@link Collector} that implement various useful reduction
+  52  * operations, such as accumulating elements into collections, summarizing
+  53  * elements according to various criteria, etc.
+  54  *
+  55  * &lt;p&gt;The following are examples of using the predefined collectors to perform
+  56  * common mutable reduction tasks:
+  57  *
+  58  * &lt;pre&gt;{@code
+  59  * // Accumulate names into a List
+  60  * List&lt;String&gt; list = people.stream()
+  61  *   .map(Person::getName)
+  62  *   .collect(Collectors.toList());
+  63  *
+  64  * // Accumulate names into a TreeSet
+  65  * Set&lt;String&gt; set = people.stream()
+  66  *   .map(Person::getName)
+  67  *   .collect(Collectors.toCollection(TreeSet::new));
+  68  *
+  69  * // Convert elements to strings and concatenate them, separated by commas
+  70  * String joined = things.stream()
+  71  *   .map(Object::toString)
+  72  *   .collect(Collectors.joining(", "));
+  73  *
+  74  * // Compute sum of salaries of employee
+  75  * int total = employees.stream()
+  76  *   .collect(Collectors.summingInt(Employee::getSalary));
+  77  *
+  78  * // Group employees by department
+  79  * Map&lt;Department, List&lt;Employee&gt;&gt; byDept = employees.stream()
+  80  *   .collect(Collectors.groupingBy(Employee::getDepartment));
+  81  *
+  82  * // Compute sum of salaries by department
+  83  * Map&lt;Department, Integer&gt; totalByDept = employees.stream()
+  84  *   .collect(Collectors.groupingBy(Employee::getDepartment,
+  85  *                                  Collectors.summingInt(Employee::getSalary)));
+  86  *
+  87  * // Partition students into passing and failing
+  88  * Map&lt;Boolean, List&lt;Student&gt;&gt; passingFailing = students.stream()
+  89  *   .collect(Collectors.partitioningBy(s -&gt; s.getGrade() &gt;= PASS_THRESHOLD));
+  90  *
+  91  * }&lt;/pre&gt;
+  92  *
+  93  * @since 1.8
+  94  */
+  95 public final class Collectors {
+  96 
+  97     static final Set&lt;Collector.Characteristics&gt; CH_CONCURRENT_ID
+  98             = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.CONCURRENT,
+  99                                                      Collector.Characteristics.UNORDERED,
+ 100                                                      Collector.Characteristics.IDENTITY_FINISH));
+ 101     static final Set&lt;Collector.Characteristics&gt; CH_CONCURRENT_NOID
+ 102             = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.CONCURRENT,
+ 103                                                      Collector.Characteristics.UNORDERED));
+ 104     static final Set&lt;Collector.Characteristics&gt; CH_ID
+ 105             = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH));
+ 106     static final Set&lt;Collector.Characteristics&gt; CH_UNORDERED_ID
+ 107             = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.UNORDERED,
+ 108                                                      Collector.Characteristics.IDENTITY_FINISH));
+ 109     static final Set&lt;Collector.Characteristics&gt; CH_NOID = Collections.emptySet();
+ 110     static final Set&lt;Collector.Characteristics&gt; CH_UNORDERED_NOID
+ 111             = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.UNORDERED));
+ 112 
+ 113     private Collectors() { }
+ 114 
+ 115     /**
+ 116      * Construct an {@code IllegalStateException} with appropriate message.
+ 117      *
+ 118      * @param k the duplicate key
+ 119      * @param u 1st value to be accumulated/merged
+ 120      * @param v 2nd value to be accumulated/merged
+ 121      */
+ 122     private static IllegalStateException duplicateKeyException(
+ 123             Object k, Object u, Object v) {
+ 124         return new IllegalStateException(String.format(
+ 125             "Duplicate key %s (attempted merging values %s and %s)",
+ 126             k, u, v));
+ 127     }
+ 128 
+ 129     /**
+ 130      * {@code BinaryOperator&lt;Map&gt;} that merges the contents of its right
+ 131      * argument into its left argument, throwing {@code IllegalStateException}
+ 132      * if duplicate keys are encountered.
+ 133      *
+ 134      * @param &lt;K&gt; type of the map keys
+ 135      * @param &lt;V&gt; type of the map values
+ 136      * @param &lt;M&gt; type of the map
+ 137      * @return a merge function for two maps
+ 138      */
+ 139     private static &lt;K, V, M extends Map&lt;K,V&gt;&gt;
+ 140     BinaryOperator&lt;M&gt; uniqKeysMapMerger() {
+ 141         return (m1, m2) -&gt; {
+ 142             for (Map.Entry&lt;K,V&gt; e : m2.entrySet()) {
+ 143                 K k = e.getKey();
+ 144                 V v = Objects.requireNonNull(e.getValue());
+ 145                 V u = m1.putIfAbsent(k, v);
+ 146                 if (u != null) throw duplicateKeyException(k, u, v);
+ 147             }
+ 148             return m1;
+ 149         };
+ 150     }
+ 151 
+ 152     /**
+ 153      * {@code BiConsumer&lt;Map, T&gt;} that accumulates (key, value) pairs
+ 154      * extracted from elements into the map, throwing {@code IllegalStateException}
+ 155      * if duplicate keys are encountered.
+ 156      *
+ 157      * @param keyMapper a function that maps an element into a key
+ 158      * @param valueMapper a function that maps an element into a value
+ 159      * @param &lt;T&gt; type of elements
+ 160      * @param &lt;K&gt; type of map keys
+ 161      * @param &lt;V&gt; type of map values
+ 162      * @return an accumulating consumer
+ 163      */
+ 164     private static &lt;T, K, V&gt;
+ 165     BiConsumer&lt;Map&lt;K, V&gt;, T&gt; uniqKeysMapAccumulator(Function&lt;? super T, ? extends K&gt; keyMapper,
+ 166                                                     Function&lt;? super T, ? extends V&gt; valueMapper) {
+ 167         return (map, element) -&gt; {
+ 168             K k = keyMapper.apply(element);
+ 169             V v = Objects.requireNonNull(valueMapper.apply(element));
+ 170             V u = map.putIfAbsent(k, v);
+ 171             if (u != null) throw duplicateKeyException(k, u, v);
+ 172         };
+ 173     }
+ 174 
+ 175     @SuppressWarnings("unchecked")
+ 176     private static &lt;I, R&gt; Function&lt;I, R&gt; castingIdentity() {
+ 177         return i -&gt; (R) i;
+ 178     }
+ 179 
+ 180     /**
+ 181      * Simple implementation class for {@code Collector}.
+ 182      *
+ 183      * @param &lt;T&gt; the type of elements to be collected
+ 184      * @param &lt;R&gt; the type of the result
+ 185      */
+ 186     static class CollectorImpl&lt;T, A, R&gt; implements Collector&lt;T, A, R&gt; {
+<a name="2" id="anc2"></a><span class="new"> 187         private final IntFunction&lt;A&gt; sizedSupplier;</span>
+ 188         private final Supplier&lt;A&gt; supplier;
+ 189         private final BiConsumer&lt;A, T&gt; accumulator;
+ 190         private final BinaryOperator&lt;A&gt; combiner;
+ 191         private final Function&lt;A, R&gt; finisher;
+ 192         private final Set&lt;Characteristics&gt; characteristics;
+ 193 
+<a name="3" id="anc3"></a><span class="changed"> 194         CollectorImpl(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="changed"> 195                       Supplier&lt;A&gt; supplier,</span>
+ 196                       BiConsumer&lt;A, T&gt; accumulator,
+ 197                       BinaryOperator&lt;A&gt; combiner,
+ 198                       Function&lt;A,R&gt; finisher,
+ 199                       Set&lt;Characteristics&gt; characteristics) {
+<a name="4" id="anc4"></a><span class="new"> 200             this.sizedSupplier = sizedSupplier;</span>
+ 201             this.supplier = supplier;
+ 202             this.accumulator = accumulator;
+ 203             this.combiner = combiner;
+ 204             this.finisher = finisher;
+ 205             this.characteristics = characteristics;
+ 206         }
+ 207 
+<a name="5" id="anc5"></a><span class="new"> 208         CollectorImpl(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="new"> 209                       Supplier&lt;A&gt; supplier,</span>
+<span class="new"> 210                       BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new"> 211                       BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new"> 212                       Set&lt;Characteristics&gt; characteristics) {</span>
+<span class="new"> 213             this(sizedSupplier, supplier, accumulator, combiner, castingIdentity(), characteristics);</span>
+<span class="new"> 214         }</span>
+<span class="new"> 215 </span>
+<span class="new"> 216         CollectorImpl(Supplier&lt;A&gt; supplier,</span>
+<span class="new"> 217                       BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new"> 218                       BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new"> 219                       Function&lt;A,R&gt; finisher,</span>
+<span class="new"> 220                       Set&lt;Characteristics&gt; characteristics) {</span>
+<span class="new"> 221             this(ignored -&gt; supplier.get(), supplier, accumulator, combiner, finisher, characteristics);</span>
+<span class="new"> 222         }</span>
+<span class="new"> 223 </span>
+ 224         CollectorImpl(Supplier&lt;A&gt; supplier,
+ 225                       BiConsumer&lt;A, T&gt; accumulator,
+ 226                       BinaryOperator&lt;A&gt; combiner,
+ 227                       Set&lt;Characteristics&gt; characteristics) {
+ 228             this(supplier, accumulator, combiner, castingIdentity(), characteristics);
+ 229         }
+ 230 
+ 231         @Override
+ 232         public BiConsumer&lt;A, T&gt; accumulator() {
+ 233             return accumulator;
+ 234         }
+ 235 
+ 236         @Override
+ 237         public Supplier&lt;A&gt; supplier() {
+ 238             return supplier;
+ 239         }
+ 240 
+ 241         @Override
+<a name="6" id="anc6"></a><span class="new"> 242         public IntFunction&lt;A&gt; sizedSupplier() {</span>
+<span class="new"> 243             return sizedSupplier;</span>
+<span class="new"> 244         }</span>
+<span class="new"> 245 </span>
+<span class="new"> 246         @Override</span>
+ 247         public BinaryOperator&lt;A&gt; combiner() {
+ 248             return combiner;
+ 249         }
+ 250 
+ 251         @Override
+ 252         public Function&lt;A, R&gt; finisher() {
+ 253             return finisher;
+ 254         }
+ 255 
+ 256         @Override
+ 257         public Set&lt;Characteristics&gt; characteristics() {
+ 258             return characteristics;
+ 259         }
+ 260     }
+ 261 
+ 262     /**
+ 263      * Returns a {@code Collector} that accumulates the input elements into a
+ 264      * new {@code Collection}, in encounter order.  The {@code Collection} is
+ 265      * created by the provided factory.
+ 266      *
+ 267      * @param &lt;T&gt; the type of the input elements
+ 268      * @param &lt;C&gt; the type of the resulting {@code Collection}
+ 269      * @param collectionFactory a supplier providing a new empty {@code Collection}
+ 270      *                          into which the results will be inserted
+ 271      * @return a {@code Collector} which collects all the input elements into a
+ 272      * {@code Collection}, in encounter order
+ 273      */
+ 274     public static &lt;T, C extends Collection&lt;T&gt;&gt;
+ 275     Collector&lt;T, ?, C&gt; toCollection(Supplier&lt;C&gt; collectionFactory) {
+ 276         return new CollectorImpl&lt;&gt;(collectionFactory, Collection&lt;T&gt;::add,
+ 277                                    (r1, r2) -&gt; { r1.addAll(r2); return r1; },
+ 278                                    CH_ID);
+ 279     }
+ 280 
+ 281     /**
+ 282      * Returns a {@code Collector} that accumulates the input elements into a
+ 283      * new {@code List}. There are no guarantees on the type, mutability,
+ 284      * serializability, or thread-safety of the {@code List} returned; if more
+ 285      * control over the returned {@code List} is required, use {@link #toCollection(Supplier)}.
+ 286      *
+ 287      * @param &lt;T&gt; the type of the input elements
+ 288      * @return a {@code Collector} which collects all the input elements into a
+ 289      * {@code List}, in encounter order
+ 290      */
+ 291     public static &lt;T&gt;
+ 292     Collector&lt;T, ?, List&lt;T&gt;&gt; toList() {
+<a name="7" id="anc7"></a><span class="changed"> 293         return new CollectorImpl&lt;&gt;((IntFunction&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed"> 294                                    (Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed"> 295                                    List::add,</span>
+ 296                                    (left, right) -&gt; { left.addAll(right); return left; },
+ 297                                    CH_ID);
+ 298     }
+ 299 
+ 300     /**
+ 301      * Returns a {@code Collector} that accumulates the input elements into an
+ 302      * &lt;a href="../List.html#unmodifiable"&gt;unmodifiable List&lt;/a&gt; in encounter
+ 303      * order. The returned Collector disallows null values and will throw
+ 304      * {@code NullPointerException} if it is presented with a null value.
+ 305      *
+ 306      * @param &lt;T&gt; the type of the input elements
+ 307      * @return a {@code Collector} that accumulates the input elements into an
+ 308      * &lt;a href="../List.html#unmodifiable"&gt;unmodifiable List&lt;/a&gt; in encounter order
+ 309      * @since 10
+ 310      */
+ 311     @SuppressWarnings("unchecked")
+ 312     public static &lt;T&gt;
+ 313     Collector&lt;T, ?, List&lt;T&gt;&gt; toUnmodifiableList() {
+<a name="8" id="anc8"></a><span class="changed"> 314         return new CollectorImpl&lt;&gt;((IntFunction&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed"> 315                                    (Supplier&lt;List&lt;T&gt;&gt;) ArrayList::new,</span>
+<span class="changed"> 316                                    List::add,</span>
+ 317                                    (left, right) -&gt; { left.addAll(right); return left; },
+ 318                                    list -&gt; (List&lt;T&gt;)List.of(list.toArray()),
+ 319                                    CH_NOID);
+ 320     }
+ 321 
+ 322     /**
+ 323      * Returns a {@code Collector} that accumulates the input elements into a
+ 324      * new {@code Set}. There are no guarantees on the type, mutability,
+ 325      * serializability, or thread-safety of the {@code Set} returned; if more
+ 326      * control over the returned {@code Set} is required, use
+ 327      * {@link #toCollection(Supplier)}.
+ 328      *
+ 329      * &lt;p&gt;This is an {@link Collector.Characteristics#UNORDERED unordered}
+ 330      * Collector.
+ 331      *
+ 332      * @param &lt;T&gt; the type of the input elements
+ 333      * @return a {@code Collector} which collects all the input elements into a
+ 334      * {@code Set}
+ 335      */
+ 336     public static &lt;T&gt;
+ 337     Collector&lt;T, ?, Set&lt;T&gt;&gt; toSet() {
+<a name="9" id="anc9"></a><span class="changed"> 338         return new CollectorImpl&lt;&gt;((IntFunction&lt;Set&lt;T&gt;&gt;) HashSet::new,</span>
+<span class="changed"> 339                                    (Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new,</span>
+<span class="changed"> 340                                    Set::add,</span>
+ 341                                    (left, right) -&gt; {
+ 342                                        if (left.size() &lt; right.size()) {
+ 343                                            right.addAll(left); return right;
+ 344                                        } else {
+ 345                                            left.addAll(right); return left;
+ 346                                        }
+ 347                                    },
+ 348                                    CH_UNORDERED_ID);
+ 349     }
+ 350 
+ 351     /**
+ 352      * Returns a {@code Collector} that accumulates the input elements into an
+ 353      * &lt;a href="../Set.html#unmodifiable"&gt;unmodifiable Set&lt;/a&gt;. The returned
+ 354      * Collector disallows null values and will throw {@code NullPointerException}
+ 355      * if it is presented with a null value. If the input contains duplicate elements,
+ 356      * an arbitrary element of the duplicates is preserved.
+ 357      *
+ 358      * &lt;p&gt;This is an {@link Collector.Characteristics#UNORDERED unordered}
+ 359      * Collector.
+ 360      *
+ 361      * @param &lt;T&gt; the type of the input elements
+ 362      * @return a {@code Collector} that accumulates the input elements into an
+ 363      * &lt;a href="../Set.html#unmodifiable"&gt;unmodifiable Set&lt;/a&gt;
+ 364      * @since 10
+ 365      */
+ 366     @SuppressWarnings("unchecked")
+ 367     public static &lt;T&gt;
+ 368     Collector&lt;T, ?, Set&lt;T&gt;&gt; toUnmodifiableSet() {
+<a name="10" id="anc10"></a><span class="changed"> 369         return new CollectorImpl&lt;&gt;((IntFunction&lt;Set&lt;T&gt;&gt;) HashSet::new,</span>
+<span class="changed"> 370                                    (Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new,</span>
+<span class="changed"> 371                                    Set::add,</span>
+ 372                                    (left, right) -&gt; {
+ 373                                        if (left.size() &lt; right.size()) {
+ 374                                            right.addAll(left); return right;
+ 375                                        } else {
+ 376                                            left.addAll(right); return left;
+ 377                                        }
+ 378                                    },
+ 379                                    set -&gt; (Set&lt;T&gt;)Set.of(set.toArray()),
+ 380                                    CH_UNORDERED_NOID);
+ 381     }
+ 382 
+ 383     /**
+ 384      * Returns a {@code Collector} that concatenates the input elements into a
+ 385      * {@code String}, in encounter order.
+ 386      *
+ 387      * @return a {@code Collector} that concatenates the input elements into a
+ 388      * {@code String}, in encounter order
+ 389      */
+ 390     public static Collector&lt;CharSequence, ?, String&gt; joining() {
+ 391         return new CollectorImpl&lt;CharSequence, StringBuilder, String&gt;(
+<a name="11" id="anc11"></a><span class="changed"> 392                 StringBuilder::new, StringBuilder::new, StringBuilder::append,</span>
+ 393                 (r1, r2) -&gt; { r1.append(r2); return r1; },
+ 394                 StringBuilder::toString, CH_NOID);
+ 395     }
+ 396 
+ 397     /**
+ 398      * Returns a {@code Collector} that concatenates the input elements,
+ 399      * separated by the specified delimiter, in encounter order.
+ 400      *
+ 401      * @param delimiter the delimiter to be used between each element
+ 402      * @return A {@code Collector} which concatenates CharSequence elements,
+ 403      * separated by the specified delimiter, in encounter order
+ 404      */
+ 405     public static Collector&lt;CharSequence, ?, String&gt; joining(CharSequence delimiter) {
+ 406         return joining(delimiter, "", "");
+ 407     }
+ 408 
+ 409     /**
+ 410      * Returns a {@code Collector} that concatenates the input elements,
+ 411      * separated by the specified delimiter, with the specified prefix and
+ 412      * suffix, in encounter order.
+ 413      *
+ 414      * @param delimiter the delimiter to be used between each element
+ 415      * @param  prefix the sequence of characters to be used at the beginning
+ 416      *                of the joined result
+ 417      * @param  suffix the sequence of characters to be used at the end
+ 418      *                of the joined result
+ 419      * @return A {@code Collector} which concatenates CharSequence elements,
+ 420      * separated by the specified delimiter, in encounter order
+ 421      */
+ 422     public static Collector&lt;CharSequence, ?, String&gt; joining(CharSequence delimiter,
+ 423                                                              CharSequence prefix,
+ 424                                                              CharSequence suffix) {
+ 425         return new CollectorImpl&lt;&gt;(
+ 426                 () -&gt; new StringJoiner(delimiter, prefix, suffix),
+ 427                 StringJoiner::add, StringJoiner::merge,
+ 428                 StringJoiner::toString, CH_NOID);
+ 429     }
+ 430 
+ 431     /**
+ 432      * {@code BinaryOperator&lt;Map&gt;} that merges the contents of its right
+ 433      * argument into its left argument, using the provided merge function to
+ 434      * handle duplicate keys.
+ 435      *
+ 436      * @param &lt;K&gt; type of the map keys
+ 437      * @param &lt;V&gt; type of the map values
+ 438      * @param &lt;M&gt; type of the map
+ 439      * @param mergeFunction A merge function suitable for
+ 440      * {@link Map#merge(Object, Object, BiFunction) Map.merge()}
+ 441      * @return a merge function for two maps
+ 442      */
+ 443     private static &lt;K, V, M extends Map&lt;K,V&gt;&gt;
+ 444     BinaryOperator&lt;M&gt; mapMerger(BinaryOperator&lt;V&gt; mergeFunction) {
+ 445         return (m1, m2) -&gt; {
+ 446             for (Map.Entry&lt;K,V&gt; e : m2.entrySet())
+ 447                 m1.merge(e.getKey(), e.getValue(), mergeFunction);
+ 448             return m1;
+ 449         };
+ 450     }
+ 451 
+ 452     /**
+ 453      * Adapts a {@code Collector} accepting elements of type {@code U} to one
+ 454      * accepting elements of type {@code T} by applying a mapping function to
+ 455      * each input element before accumulation.
+ 456      *
+ 457      * @apiNote
+ 458      * The {@code mapping()} collectors are most useful when used in a
+ 459      * multi-level reduction, such as downstream of a {@code groupingBy} or
+ 460      * {@code partitioningBy}.  For example, given a stream of
+ 461      * {@code Person}, to accumulate the set of last names in each city:
+ 462      * &lt;pre&gt;{@code
+ 463      * Map&lt;City, Set&lt;String&gt;&gt; lastNamesByCity
+ 464      *   = people.stream().collect(
+ 465      *     groupingBy(Person::getCity,
+ 466      *                mapping(Person::getLastName,
+ 467      *                        toSet())));
+ 468      * }&lt;/pre&gt;
+ 469      *
+ 470      * @param &lt;T&gt; the type of the input elements
+ 471      * @param &lt;U&gt; type of elements accepted by downstream collector
+ 472      * @param &lt;A&gt; intermediate accumulation type of the downstream collector
+ 473      * @param &lt;R&gt; result type of collector
+ 474      * @param mapper a function to be applied to the input elements
+ 475      * @param downstream a collector which will accept mapped values
+ 476      * @return a collector which applies the mapping function to the input
+ 477      * elements and provides the mapped results to the downstream collector
+ 478      */
+ 479     public static &lt;T, U, A, R&gt;
+ 480     Collector&lt;T, ?, R&gt; mapping(Function&lt;? super T, ? extends U&gt; mapper,
+ 481                                Collector&lt;? super U, A, R&gt; downstream) {
+ 482         BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<a name="12" id="anc12"></a><span class="changed"> 483         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+ 484                                    (r, t) -&gt; downstreamAccumulator.accept(r, mapper.apply(t)),
+ 485                                    downstream.combiner(), downstream.finisher(),
+ 486                                    downstream.characteristics());
+ 487     }
+ 488 
+ 489     /**
+ 490      * Adapts a {@code Collector} accepting elements of type {@code U} to one
+ 491      * accepting elements of type {@code T} by applying a flat mapping function
+ 492      * to each input element before accumulation.  The flat mapping function
+ 493      * maps an input element to a {@link Stream stream} covering zero or more
+ 494      * output elements that are then accumulated downstream.  Each mapped stream
+ 495      * is {@link java.util.stream.BaseStream#close() closed} after its contents
+ 496      * have been placed downstream.  (If a mapped stream is {@code null}
+ 497      * an empty stream is used, instead.)
+ 498      *
+ 499      * @apiNote
+ 500      * The {@code flatMapping()} collectors are most useful when used in a
+ 501      * multi-level reduction, such as downstream of a {@code groupingBy} or
+ 502      * {@code partitioningBy}.  For example, given a stream of
+ 503      * {@code Order}, to accumulate the set of line items for each customer:
+ 504      * &lt;pre&gt;{@code
+ 505      * Map&lt;String, Set&lt;LineItem&gt;&gt; itemsByCustomerName
+ 506      *   = orders.stream().collect(
+ 507      *     groupingBy(Order::getCustomerName,
+ 508      *                flatMapping(order -&gt; order.getLineItems().stream(),
+ 509      *                            toSet())));
+ 510      * }&lt;/pre&gt;
+ 511      *
+ 512      * @param &lt;T&gt; the type of the input elements
+ 513      * @param &lt;U&gt; type of elements accepted by downstream collector
+ 514      * @param &lt;A&gt; intermediate accumulation type of the downstream collector
+ 515      * @param &lt;R&gt; result type of collector
+ 516      * @param mapper a function to be applied to the input elements, which
+ 517      * returns a stream of results
+ 518      * @param downstream a collector which will receive the elements of the
+ 519      * stream returned by mapper
+ 520      * @return a collector which applies the mapping function to the input
+ 521      * elements and provides the flat mapped results to the downstream collector
+ 522      * @since 9
+ 523      */
+ 524     public static &lt;T, U, A, R&gt;
+ 525     Collector&lt;T, ?, R&gt; flatMapping(Function&lt;? super T, ? extends Stream&lt;? extends U&gt;&gt; mapper,
+ 526                                    Collector&lt;? super U, A, R&gt; downstream) {
+ 527         BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
+<a name="13" id="anc13"></a><span class="changed"> 528         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+ 529                             (r, t) -&gt; {
+ 530                                 try (Stream&lt;? extends U&gt; result = mapper.apply(t)) {
+ 531                                     if (result != null)
+ 532                                         result.sequential().forEach(u -&gt; downstreamAccumulator.accept(r, u));
+ 533                                 }
+ 534                             },
+ 535                             downstream.combiner(), downstream.finisher(),
+ 536                             downstream.characteristics());
+ 537     }
+ 538 
+ 539     /**
+ 540      * Adapts a {@code Collector} to one accepting elements of the same type
+ 541      * {@code T} by applying the predicate to each input element and only
+ 542      * accumulating if the predicate returns {@code true}.
+ 543      *
+ 544      * @apiNote
+ 545      * The {@code filtering()} collectors are most useful when used in a
+ 546      * multi-level reduction, such as downstream of a {@code groupingBy} or
+ 547      * {@code partitioningBy}.  For example, given a stream of
+ 548      * {@code Employee}, to accumulate the employees in each department that have a
+ 549      * salary above a certain threshold:
+ 550      * &lt;pre&gt;{@code
+ 551      * Map&lt;Department, Set&lt;Employee&gt;&gt; wellPaidEmployeesByDepartment
+ 552      *   = employees.stream().collect(
+ 553      *     groupingBy(Employee::getDepartment,
+ 554      *                filtering(e -&gt; e.getSalary() &gt; 2000,
+ 555      *                          toSet())));
+ 556      * }&lt;/pre&gt;
+ 557      * A filtering collector differs from a stream's {@code filter()} operation.
+ 558      * In this example, suppose there are no employees whose salary is above the
+ 559      * threshold in some department.  Using a filtering collector as shown above
+ 560      * would result in a mapping from that department to an empty {@code Set}.
+ 561      * If a stream {@code filter()} operation were done instead, there would be
+ 562      * no mapping for that department at all.
+ 563      *
+ 564      * @param &lt;T&gt; the type of the input elements
+ 565      * @param &lt;A&gt; intermediate accumulation type of the downstream collector
+ 566      * @param &lt;R&gt; result type of collector
+ 567      * @param predicate a predicate to be applied to the input elements
+ 568      * @param downstream a collector which will accept values that match the
+ 569      * predicate
+ 570      * @return a collector which applies the predicate to the input elements
+ 571      * and provides matching elements to the downstream collector
+ 572      * @since 9
+ 573      */
+ 574     public static &lt;T, A, R&gt;
+ 575     Collector&lt;T, ?, R&gt; filtering(Predicate&lt;? super T&gt; predicate,
+ 576                                  Collector&lt;? super T, A, R&gt; downstream) {
+ 577         BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+<a name="14" id="anc14"></a><span class="changed"> 578         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(), downstream.supplier(),</span>
+ 579                                    (r, t) -&gt; {
+ 580                                        if (predicate.test(t)) {
+ 581                                            downstreamAccumulator.accept(r, t);
+ 582                                        }
+ 583                                    },
+ 584                                    downstream.combiner(), downstream.finisher(),
+ 585                                    downstream.characteristics());
+ 586     }
+ 587 
+ 588     /**
+ 589      * Adapts a {@code Collector} to perform an additional finishing
+ 590      * transformation.  For example, one could adapt the {@link #toList()}
+ 591      * collector to always produce an immutable list with:
+ 592      * &lt;pre&gt;{@code
+ 593      * List&lt;String&gt; list = people.stream().collect(
+ 594      *   collectingAndThen(toList(),
+ 595      *                     Collections::unmodifiableList));
+ 596      * }&lt;/pre&gt;
+ 597      *
+ 598      * @param &lt;T&gt; the type of the input elements
+ 599      * @param &lt;A&gt; intermediate accumulation type of the downstream collector
+ 600      * @param &lt;R&gt; result type of the downstream collector
+ 601      * @param &lt;RR&gt; result type of the resulting collector
+ 602      * @param downstream a collector
+ 603      * @param finisher a function to be applied to the final result of the downstream collector
+ 604      * @return a collector which performs the action of the downstream collector,
+ 605      * followed by an additional finishing step
+ 606      */
+ 607     public static&lt;T,A,R,RR&gt; Collector&lt;T,A,RR&gt; collectingAndThen(Collector&lt;T,A,R&gt; downstream,
+ 608                                                                 Function&lt;R,RR&gt; finisher) {
+ 609         Set&lt;Collector.Characteristics&gt; characteristics = downstream.characteristics();
+ 610         if (characteristics.contains(Collector.Characteristics.IDENTITY_FINISH)) {
+ 611             if (characteristics.size() == 1)
+ 612                 characteristics = Collectors.CH_NOID;
+ 613             else {
+ 614                 characteristics = EnumSet.copyOf(characteristics);
+ 615                 characteristics.remove(Collector.Characteristics.IDENTITY_FINISH);
+ 616                 characteristics = Collections.unmodifiableSet(characteristics);
+ 617             }
+ 618         }
+<a name="15" id="anc15"></a><span class="changed"> 619         return new CollectorImpl&lt;&gt;(downstream.sizedSupplier(),</span>
+<span class="changed"> 620                                    downstream.supplier(),</span>
+ 621                                    downstream.accumulator(),
+ 622                                    downstream.combiner(),
+ 623                                    downstream.finisher().andThen(finisher),
+ 624                                    characteristics);
+ 625     }
+ 626 
+ 627     /**
+ 628      * Returns a {@code Collector} accepting elements of type {@code T} that
+ 629      * counts the number of input elements.  If no elements are present, the
+ 630      * result is 0.
+ 631      *
+ 632      * @implSpec
+ 633      * This produces a result equivalent to:
+ 634      * &lt;pre&gt;{@code
+ 635      *     reducing(0L, e -&gt; 1L, Long::sum)
+ 636      * }&lt;/pre&gt;
+ 637      *
+ 638      * @param &lt;T&gt; the type of the input elements
+ 639      * @return a {@code Collector} that counts the input elements
+ 640      */
+ 641     public static &lt;T&gt; Collector&lt;T, ?, Long&gt;
+ 642     counting() {
+ 643         return summingLong(e -&gt; 1L);
+ 644     }
+ 645 
+ 646     /**
+ 647      * Returns a {@code Collector} that produces the minimal element according
+ 648      * to a given {@code Comparator}, described as an {@code Optional&lt;T&gt;}.
+ 649      *
+ 650      * @implSpec
+ 651      * This produces a result equivalent to:
+ 652      * &lt;pre&gt;{@code
+ 653      *     reducing(BinaryOperator.minBy(comparator))
+ 654      * }&lt;/pre&gt;
+ 655      *
+ 656      * @param &lt;T&gt; the type of the input elements
+ 657      * @param comparator a {@code Comparator} for comparing elements
+ 658      * @return a {@code Collector} that produces the minimal value
+ 659      */
+ 660     public static &lt;T&gt; Collector&lt;T, ?, Optional&lt;T&gt;&gt;
+ 661     minBy(Comparator&lt;? super T&gt; comparator) {
+ 662         return reducing(BinaryOperator.minBy(comparator));
+ 663     }
+ 664 
+ 665     /**
+ 666      * Returns a {@code Collector} that produces the maximal element according
+ 667      * to a given {@code Comparator}, described as an {@code Optional&lt;T&gt;}.
+ 668      *
+ 669      * @implSpec
+ 670      * This produces a result equivalent to:
+ 671      * &lt;pre&gt;{@code
+ 672      *     reducing(BinaryOperator.maxBy(comparator))
+ 673      * }&lt;/pre&gt;
+ 674      *
+ 675      * @param &lt;T&gt; the type of the input elements
+ 676      * @param comparator a {@code Comparator} for comparing elements
+ 677      * @return a {@code Collector} that produces the maximal value
+ 678      */
+ 679     public static &lt;T&gt; Collector&lt;T, ?, Optional&lt;T&gt;&gt;
+ 680     maxBy(Comparator&lt;? super T&gt; comparator) {
+ 681         return reducing(BinaryOperator.maxBy(comparator));
+ 682     }
+ 683 
+ 684     /**
+ 685      * Returns a {@code Collector} that produces the sum of a integer-valued
+ 686      * function applied to the input elements.  If no elements are present,
+ 687      * the result is 0.
+ 688      *
+ 689      * @param &lt;T&gt; the type of the input elements
+ 690      * @param mapper a function extracting the property to be summed
+ 691      * @return a {@code Collector} that produces the sum of a derived property
+ 692      */
+ 693     public static &lt;T&gt; Collector&lt;T, ?, Integer&gt;
+ 694     summingInt(ToIntFunction&lt;? super T&gt; mapper) {
+ 695         return new CollectorImpl&lt;&gt;(
+ 696                 () -&gt; new int[1],
+ 697                 (a, t) -&gt; { a[0] += mapper.applyAsInt(t); },
+ 698                 (a, b) -&gt; { a[0] += b[0]; return a; },
+ 699                 a -&gt; a[0], CH_NOID);
+ 700     }
+ 701 
+ 702     /**
+ 703      * Returns a {@code Collector} that produces the sum of a long-valued
+ 704      * function applied to the input elements.  If no elements are present,
+ 705      * the result is 0.
+ 706      *
+ 707      * @param &lt;T&gt; the type of the input elements
+ 708      * @param mapper a function extracting the property to be summed
+ 709      * @return a {@code Collector} that produces the sum of a derived property
+ 710      */
+ 711     public static &lt;T&gt; Collector&lt;T, ?, Long&gt;
+ 712     summingLong(ToLongFunction&lt;? super T&gt; mapper) {
+ 713         return new CollectorImpl&lt;&gt;(
+ 714                 () -&gt; new long[1],
+ 715                 (a, t) -&gt; { a[0] += mapper.applyAsLong(t); },
+ 716                 (a, b) -&gt; { a[0] += b[0]; return a; },
+ 717                 a -&gt; a[0], CH_NOID);
+ 718     }
+ 719 
+ 720     /**
+ 721      * Returns a {@code Collector} that produces the sum of a double-valued
+ 722      * function applied to the input elements.  If no elements are present,
+ 723      * the result is 0.
+ 724      *
+ 725      * &lt;p&gt;The sum returned can vary depending upon the order in which
+ 726      * values are recorded, due to accumulated rounding error in
+ 727      * addition of values of differing magnitudes. Values sorted by increasing
+ 728      * absolute magnitude tend to yield more accurate results.  If any recorded
+ 729      * value is a {@code NaN} or the sum is at any point a {@code NaN} then the
+ 730      * sum will be {@code NaN}.
+ 731      *
+ 732      * @param &lt;T&gt; the type of the input elements
+ 733      * @param mapper a function extracting the property to be summed
+ 734      * @return a {@code Collector} that produces the sum of a derived property
+ 735      */
+ 736     public static &lt;T&gt; Collector&lt;T, ?, Double&gt;
+ 737     summingDouble(ToDoubleFunction&lt;? super T&gt; mapper) {
+ 738         /*
+ 739          * In the arrays allocated for the collect operation, index 0
+ 740          * holds the high-order bits of the running sum, index 1 holds
+ 741          * the low-order bits of the sum computed via compensated
+ 742          * summation, and index 2 holds the simple sum used to compute
+ 743          * the proper result if the stream contains infinite values of
+ 744          * the same sign.
+ 745          */
+ 746         return new CollectorImpl&lt;&gt;(
+ 747                 () -&gt; new double[3],
+ 748                 (a, t) -&gt; { double val = mapper.applyAsDouble(t);
+ 749                             sumWithCompensation(a, val);
+ 750                             a[2] += val;},
+ 751                 (a, b) -&gt; { sumWithCompensation(a, b[0]);
+ 752                             a[2] += b[2];
+ 753                             return sumWithCompensation(a, b[1]); },
+ 754                 a -&gt; computeFinalSum(a),
+ 755                 CH_NOID);
+ 756     }
+ 757 
+ 758     /**
+ 759      * Incorporate a new double value using Kahan summation /
+ 760      * compensation summation.
+ 761      *
+ 762      * High-order bits of the sum are in intermediateSum[0], low-order
+ 763      * bits of the sum are in intermediateSum[1], any additional
+ 764      * elements are application-specific.
+ 765      *
+ 766      * @param intermediateSum the high-order and low-order words of the intermediate sum
+ 767      * @param value the name value to be included in the running sum
+ 768      */
+ 769     static double[] sumWithCompensation(double[] intermediateSum, double value) {
+ 770         double tmp = value - intermediateSum[1];
+ 771         double sum = intermediateSum[0];
+ 772         double velvel = sum + tmp; // Little wolf of rounding error
+ 773         intermediateSum[1] = (velvel - sum) - tmp;
+ 774         intermediateSum[0] = velvel;
+ 775         return intermediateSum;
+ 776     }
+ 777 
+ 778     /**
+ 779      * If the compensated sum is spuriously NaN from accumulating one
+ 780      * or more same-signed infinite values, return the
+ 781      * correctly-signed infinity stored in the simple sum.
+ 782      */
+ 783     static double computeFinalSum(double[] summands) {
+ 784         // Better error bounds to add both terms as the final sum
+ 785         double tmp = summands[0] + summands[1];
+ 786         double simpleSum = summands[summands.length - 1];
+ 787         if (Double.isNaN(tmp) &amp;&amp; Double.isInfinite(simpleSum))
+ 788             return simpleSum;
+ 789         else
+ 790             return tmp;
+ 791     }
+ 792 
+ 793     /**
+ 794      * Returns a {@code Collector} that produces the arithmetic mean of an integer-valued
+ 795      * function applied to the input elements.  If no elements are present,
+ 796      * the result is 0.
+ 797      *
+ 798      * @param &lt;T&gt; the type of the input elements
+ 799      * @param mapper a function extracting the property to be averaged
+ 800      * @return a {@code Collector} that produces the arithmetic mean of a
+ 801      * derived property
+ 802      */
+ 803     public static &lt;T&gt; Collector&lt;T, ?, Double&gt;
+ 804     averagingInt(ToIntFunction&lt;? super T&gt; mapper) {
+ 805         return new CollectorImpl&lt;&gt;(
+ 806                 () -&gt; new long[2],
+ 807                 (a, t) -&gt; { a[0] += mapper.applyAsInt(t); a[1]++; },
+ 808                 (a, b) -&gt; { a[0] += b[0]; a[1] += b[1]; return a; },
+ 809                 a -&gt; (a[1] == 0) ? 0.0d : (double) a[0] / a[1], CH_NOID);
+ 810     }
+ 811 
+ 812     /**
+ 813      * Returns a {@code Collector} that produces the arithmetic mean of a long-valued
+ 814      * function applied to the input elements.  If no elements are present,
+ 815      * the result is 0.
+ 816      *
+ 817      * @param &lt;T&gt; the type of the input elements
+ 818      * @param mapper a function extracting the property to be averaged
+ 819      * @return a {@code Collector} that produces the arithmetic mean of a
+ 820      * derived property
+ 821      */
+ 822     public static &lt;T&gt; Collector&lt;T, ?, Double&gt;
+ 823     averagingLong(ToLongFunction&lt;? super T&gt; mapper) {
+ 824         return new CollectorImpl&lt;&gt;(
+ 825                 () -&gt; new long[2],
+ 826                 (a, t) -&gt; { a[0] += mapper.applyAsLong(t); a[1]++; },
+ 827                 (a, b) -&gt; { a[0] += b[0]; a[1] += b[1]; return a; },
+ 828                 a -&gt; (a[1] == 0) ? 0.0d : (double) a[0] / a[1], CH_NOID);
+ 829     }
+ 830 
+ 831     /**
+ 832      * Returns a {@code Collector} that produces the arithmetic mean of a double-valued
+ 833      * function applied to the input elements.  If no elements are present,
+ 834      * the result is 0.
+ 835      *
+ 836      * &lt;p&gt;The average returned can vary depending upon the order in which
+ 837      * values are recorded, due to accumulated rounding error in
+ 838      * addition of values of differing magnitudes. Values sorted by increasing
+ 839      * absolute magnitude tend to yield more accurate results.  If any recorded
+ 840      * value is a {@code NaN} or the sum is at any point a {@code NaN} then the
+ 841      * average will be {@code NaN}.
+ 842      *
+ 843      * @implNote The {@code double} format can represent all
+ 844      * consecutive integers in the range -2&lt;sup&gt;53&lt;/sup&gt; to
+ 845      * 2&lt;sup&gt;53&lt;/sup&gt;. If the pipeline has more than 2&lt;sup&gt;53&lt;/sup&gt;
+ 846      * values, the divisor in the average computation will saturate at
+ 847      * 2&lt;sup&gt;53&lt;/sup&gt;, leading to additional numerical errors.
+ 848      *
+ 849      * @param &lt;T&gt; the type of the input elements
+ 850      * @param mapper a function extracting the property to be averaged
+ 851      * @return a {@code Collector} that produces the arithmetic mean of a
+ 852      * derived property
+ 853      */
+ 854     public static &lt;T&gt; Collector&lt;T, ?, Double&gt;
+ 855     averagingDouble(ToDoubleFunction&lt;? super T&gt; mapper) {
+ 856         /*
+ 857          * In the arrays allocated for the collect operation, index 0
+ 858          * holds the high-order bits of the running sum, index 1 holds
+ 859          * the low-order bits of the sum computed via compensated
+ 860          * summation, and index 2 holds the number of values seen.
+ 861          */
+ 862         return new CollectorImpl&lt;&gt;(
+ 863                 () -&gt; new double[4],
+ 864                 (a, t) -&gt; { double val = mapper.applyAsDouble(t); sumWithCompensation(a, val); a[2]++; a[3]+= val;},
+ 865                 (a, b) -&gt; { sumWithCompensation(a, b[0]); sumWithCompensation(a, b[1]); a[2] += b[2]; a[3] += b[3]; return a; },
+ 866                 a -&gt; (a[2] == 0) ? 0.0d : (computeFinalSum(a) / a[2]),
+ 867                 CH_NOID);
+ 868     }
+ 869 
+ 870     /**
+ 871      * Returns a {@code Collector} which performs a reduction of its
+ 872      * input elements under a specified {@code BinaryOperator} using the
+ 873      * provided identity.
+ 874      *
+ 875      * @apiNote
+ 876      * The {@code reducing()} collectors are most useful when used in a
+ 877      * multi-level reduction, downstream of {@code groupingBy} or
+ 878      * {@code partitioningBy}.  To perform a simple reduction on a stream,
+ 879      * use {@link Stream#reduce(Object, BinaryOperator)}} instead.
+ 880      *
+ 881      * @param &lt;T&gt; element type for the input and output of the reduction
+ 882      * @param identity the identity value for the reduction (also, the value
+ 883      *                 that is returned when there are no input elements)
+ 884      * @param op a {@code BinaryOperator&lt;T&gt;} used to reduce the input elements
+ 885      * @return a {@code Collector} which implements the reduction operation
+ 886      *
+ 887      * @see #reducing(BinaryOperator)
+ 888      * @see #reducing(Object, Function, BinaryOperator)
+ 889      */
+ 890     public static &lt;T&gt; Collector&lt;T, ?, T&gt;
+ 891     reducing(T identity, BinaryOperator&lt;T&gt; op) {
+ 892         return new CollectorImpl&lt;&gt;(
+ 893                 boxSupplier(identity),
+ 894                 (a, t) -&gt; { a[0] = op.apply(a[0], t); },
+ 895                 (a, b) -&gt; { a[0] = op.apply(a[0], b[0]); return a; },
+ 896                 a -&gt; a[0],
+ 897                 CH_NOID);
+ 898     }
+ 899 
+ 900     @SuppressWarnings("unchecked")
+ 901     private static &lt;T&gt; Supplier&lt;T[]&gt; boxSupplier(T identity) {
+ 902         return () -&gt; (T[]) new Object[] { identity };
+ 903     }
+ 904 
+ 905     /**
+ 906      * Returns a {@code Collector} which performs a reduction of its
+ 907      * input elements under a specified {@code BinaryOperator}.  The result
+ 908      * is described as an {@code Optional&lt;T&gt;}.
+ 909      *
+ 910      * @apiNote
+ 911      * The {@code reducing()} collectors are most useful when used in a
+ 912      * multi-level reduction, downstream of {@code groupingBy} or
+ 913      * {@code partitioningBy}.  To perform a simple reduction on a stream,
+ 914      * use {@link Stream#reduce(BinaryOperator)} instead.
+ 915      *
+ 916      * &lt;p&gt;For example, given a stream of {@code Person}, to calculate tallest
+ 917      * person in each city:
+ 918      * &lt;pre&gt;{@code
+ 919      * Comparator&lt;Person&gt; byHeight = Comparator.comparing(Person::getHeight);
+ 920      * Map&lt;City, Optional&lt;Person&gt;&gt; tallestByCity
+ 921      *   = people.stream().collect(
+ 922      *     groupingBy(Person::getCity,
+ 923      *                reducing(BinaryOperator.maxBy(byHeight))));
+ 924      * }&lt;/pre&gt;
+ 925      *
+ 926      * @param &lt;T&gt; element type for the input and output of the reduction
+ 927      * @param op a {@code BinaryOperator&lt;T&gt;} used to reduce the input elements
+ 928      * @return a {@code Collector} which implements the reduction operation
+ 929      *
+ 930      * @see #reducing(Object, BinaryOperator)
+ 931      * @see #reducing(Object, Function, BinaryOperator)
+ 932      */
+ 933     public static &lt;T&gt; Collector&lt;T, ?, Optional&lt;T&gt;&gt;
+ 934     reducing(BinaryOperator&lt;T&gt; op) {
+ 935         class OptionalBox implements Consumer&lt;T&gt; {
+ 936             T value = null;
+ 937             boolean present = false;
+ 938 
+ 939             @Override
+ 940             public void accept(T t) {
+ 941                 if (present) {
+ 942                     value = op.apply(value, t);
+ 943                 }
+ 944                 else {
+ 945                     value = t;
+ 946                     present = true;
+ 947                 }
+ 948             }
+ 949         }
+ 950 
+ 951         return new CollectorImpl&lt;T, OptionalBox, Optional&lt;T&gt;&gt;(
+ 952                 OptionalBox::new, OptionalBox::accept,
+ 953                 (a, b) -&gt; { if (b.present) a.accept(b.value); return a; },
+ 954                 a -&gt; Optional.ofNullable(a.value), CH_NOID);
+ 955     }
+ 956 
+ 957     /**
+ 958      * Returns a {@code Collector} which performs a reduction of its
+ 959      * input elements under a specified mapping function and
+ 960      * {@code BinaryOperator}. This is a generalization of
+ 961      * {@link #reducing(Object, BinaryOperator)} which allows a transformation
+ 962      * of the elements before reduction.
+ 963      *
+ 964      * @apiNote
+ 965      * The {@code reducing()} collectors are most useful when used in a
+ 966      * multi-level reduction, downstream of {@code groupingBy} or
+ 967      * {@code partitioningBy}.  To perform a simple map-reduce on a stream,
+ 968      * use {@link Stream#map(Function)} and {@link Stream#reduce(Object, BinaryOperator)}
+ 969      * instead.
+ 970      *
+ 971      * &lt;p&gt;For example, given a stream of {@code Person}, to calculate the longest
+ 972      * last name of residents in each city:
+ 973      * &lt;pre&gt;{@code
+ 974      * Comparator&lt;String&gt; byLength = Comparator.comparing(String::length);
+ 975      * Map&lt;City, String&gt; longestLastNameByCity
+ 976      *   = people.stream().collect(
+ 977      *     groupingBy(Person::getCity,
+ 978      *                reducing("",
+ 979      *                         Person::getLastName,
+ 980      *                         BinaryOperator.maxBy(byLength))));
+ 981      * }&lt;/pre&gt;
+ 982      *
+ 983      * @param &lt;T&gt; the type of the input elements
+ 984      * @param &lt;U&gt; the type of the mapped values
+ 985      * @param identity the identity value for the reduction (also, the value
+ 986      *                 that is returned when there are no input elements)
+ 987      * @param mapper a mapping function to apply to each input value
+ 988      * @param op a {@code BinaryOperator&lt;U&gt;} used to reduce the mapped values
+ 989      * @return a {@code Collector} implementing the map-reduce operation
+ 990      *
+ 991      * @see #reducing(Object, BinaryOperator)
+ 992      * @see #reducing(BinaryOperator)
+ 993      */
+ 994     public static &lt;T, U&gt;
+ 995     Collector&lt;T, ?, U&gt; reducing(U identity,
+ 996                                 Function&lt;? super T, ? extends U&gt; mapper,
+ 997                                 BinaryOperator&lt;U&gt; op) {
+ 998         return new CollectorImpl&lt;&gt;(
+ 999                 boxSupplier(identity),
+1000                 (a, t) -&gt; { a[0] = op.apply(a[0], mapper.apply(t)); },
+1001                 (a, b) -&gt; { a[0] = op.apply(a[0], b[0]); return a; },
+1002                 a -&gt; a[0], CH_NOID);
+1003     }
+1004 
+1005     /**
+1006      * Returns a {@code Collector} implementing a "group by" operation on
+1007      * input elements of type {@code T}, grouping elements according to a
+1008      * classification function, and returning the results in a {@code Map}.
+1009      *
+1010      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1011      * The collector produces a {@code Map&lt;K, List&lt;T&gt;&gt;} whose keys are the
+1012      * values resulting from applying the classification function to the input
+1013      * elements, and whose corresponding values are {@code List}s containing the
+1014      * input elements which map to the associated key under the classification
+1015      * function.
+1016      *
+1017      * &lt;p&gt;There are no guarantees on the type, mutability, serializability, or
+1018      * thread-safety of the {@code Map} or {@code List} objects returned.
+1019      * @implSpec
+1020      * This produces a result similar to:
+1021      * &lt;pre&gt;{@code
+1022      *     groupingBy(classifier, toList());
+1023      * }&lt;/pre&gt;
+1024      *
+1025      * @implNote
+1026      * The returned {@code Collector} is not concurrent.  For parallel stream
+1027      * pipelines, the {@code combiner} function operates by merging the keys
+1028      * from one map into another, which can be an expensive operation.  If
+1029      * preservation of the order in which elements appear in the resulting {@code Map}
+1030      * collector is not required, using {@link #groupingByConcurrent(Function)}
+1031      * may offer better parallel performance.
+1032      *
+1033      * @param &lt;T&gt; the type of the input elements
+1034      * @param &lt;K&gt; the type of the keys
+1035      * @param classifier the classifier function mapping input elements to keys
+1036      * @return a {@code Collector} implementing the group-by operation
+1037      *
+1038      * @see #groupingBy(Function, Collector)
+1039      * @see #groupingBy(Function, Supplier, Collector)
+1040      * @see #groupingByConcurrent(Function)
+1041      */
+1042     public static &lt;T, K&gt; Collector&lt;T, ?, Map&lt;K, List&lt;T&gt;&gt;&gt;
+1043     groupingBy(Function&lt;? super T, ? extends K&gt; classifier) {
+1044         return groupingBy(classifier, toList());
+1045     }
+1046 
+1047     /**
+1048      * Returns a {@code Collector} implementing a cascaded "group by" operation
+1049      * on input elements of type {@code T}, grouping elements according to a
+1050      * classification function, and then performing a reduction operation on
+1051      * the values associated with a given key using the specified downstream
+1052      * {@code Collector}.
+1053      *
+1054      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1055      * The downstream collector operates on elements of type {@code T} and
+1056      * produces a result of type {@code D}. The resulting collector produces a
+1057      * {@code Map&lt;K, D&gt;}.
+1058      *
+1059      * &lt;p&gt;There are no guarantees on the type, mutability,
+1060      * serializability, or thread-safety of the {@code Map} returned.
+1061      *
+1062      * &lt;p&gt;For example, to compute the set of last names of people in each city:
+1063      * &lt;pre&gt;{@code
+1064      * Map&lt;City, Set&lt;String&gt;&gt; namesByCity
+1065      *   = people.stream().collect(
+1066      *     groupingBy(Person::getCity,
+1067      *                mapping(Person::getLastName,
+1068      *                        toSet())));
+1069      * }&lt;/pre&gt;
+1070      *
+1071      * @implNote
+1072      * The returned {@code Collector} is not concurrent.  For parallel stream
+1073      * pipelines, the {@code combiner} function operates by merging the keys
+1074      * from one map into another, which can be an expensive operation.  If
+1075      * preservation of the order in which elements are presented to the downstream
+1076      * collector is not required, using {@link #groupingByConcurrent(Function, Collector)}
+1077      * may offer better parallel performance.
+1078      *
+1079      * @param &lt;T&gt; the type of the input elements
+1080      * @param &lt;K&gt; the type of the keys
+1081      * @param &lt;A&gt; the intermediate accumulation type of the downstream collector
+1082      * @param &lt;D&gt; the result type of the downstream reduction
+1083      * @param classifier a classifier function mapping input elements to keys
+1084      * @param downstream a {@code Collector} implementing the downstream reduction
+1085      * @return a {@code Collector} implementing the cascaded group-by operation
+1086      * @see #groupingBy(Function)
+1087      *
+1088      * @see #groupingBy(Function, Supplier, Collector)
+1089      * @see #groupingByConcurrent(Function, Collector)
+1090      */
+1091     public static &lt;T, K, A, D&gt;
+1092     Collector&lt;T, ?, Map&lt;K, D&gt;&gt; groupingBy(Function&lt;? super T, ? extends K&gt; classifier,
+1093                                           Collector&lt;? super T, A, D&gt; downstream) {
+1094         return groupingBy(classifier, HashMap::new, downstream);
+1095     }
+1096 
+1097     /**
+1098      * Returns a {@code Collector} implementing a cascaded "group by" operation
+1099      * on input elements of type {@code T}, grouping elements according to a
+1100      * classification function, and then performing a reduction operation on
+1101      * the values associated with a given key using the specified downstream
+1102      * {@code Collector}.  The {@code Map} produced by the Collector is created
+1103      * with the supplied factory function.
+1104      *
+1105      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1106      * The downstream collector operates on elements of type {@code T} and
+1107      * produces a result of type {@code D}. The resulting collector produces a
+1108      * {@code Map&lt;K, D&gt;}.
+1109      *
+1110      * &lt;p&gt;For example, to compute the set of last names of people in each city,
+1111      * where the city names are sorted:
+1112      * &lt;pre&gt;{@code
+1113      * Map&lt;City, Set&lt;String&gt;&gt; namesByCity
+1114      *   = people.stream().collect(
+1115      *     groupingBy(Person::getCity,
+1116      *                TreeMap::new,
+1117      *                mapping(Person::getLastName,
+1118      *                        toSet())));
+1119      * }&lt;/pre&gt;
+1120      *
+1121      * @implNote
+1122      * The returned {@code Collector} is not concurrent.  For parallel stream
+1123      * pipelines, the {@code combiner} function operates by merging the keys
+1124      * from one map into another, which can be an expensive operation.  If
+1125      * preservation of the order in which elements are presented to the downstream
+1126      * collector is not required, using {@link #groupingByConcurrent(Function, Supplier, Collector)}
+1127      * may offer better parallel performance.
+1128      *
+1129      * @param &lt;T&gt; the type of the input elements
+1130      * @param &lt;K&gt; the type of the keys
+1131      * @param &lt;A&gt; the intermediate accumulation type of the downstream collector
+1132      * @param &lt;D&gt; the result type of the downstream reduction
+1133      * @param &lt;M&gt; the type of the resulting {@code Map}
+1134      * @param classifier a classifier function mapping input elements to keys
+1135      * @param downstream a {@code Collector} implementing the downstream reduction
+1136      * @param mapFactory a supplier providing a new empty {@code Map}
+1137      *                   into which the results will be inserted
+1138      * @return a {@code Collector} implementing the cascaded group-by operation
+1139      *
+1140      * @see #groupingBy(Function, Collector)
+1141      * @see #groupingBy(Function)
+1142      * @see #groupingByConcurrent(Function, Supplier, Collector)
+1143      */
+1144     public static &lt;T, K, D, A, M extends Map&lt;K, D&gt;&gt;
+1145     Collector&lt;T, ?, M&gt; groupingBy(Function&lt;? super T, ? extends K&gt; classifier,
+1146                                   Supplier&lt;M&gt; mapFactory,
+1147                                   Collector&lt;? super T, A, D&gt; downstream) {
+1148         Supplier&lt;A&gt; downstreamSupplier = downstream.supplier();
+1149         BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+1150         BiConsumer&lt;Map&lt;K, A&gt;, T&gt; accumulator = (m, t) -&gt; {
+1151             K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+1152             A container = m.computeIfAbsent(key, k -&gt; downstreamSupplier.get());
+1153             downstreamAccumulator.accept(container, t);
+1154         };
+1155         BinaryOperator&lt;Map&lt;K, A&gt;&gt; merger = Collectors.&lt;K, A, Map&lt;K, A&gt;&gt;mapMerger(downstream.combiner());
+1156         @SuppressWarnings("unchecked")
+1157         Supplier&lt;Map&lt;K, A&gt;&gt; mangledFactory = (Supplier&lt;Map&lt;K, A&gt;&gt;) mapFactory;
+1158 
+1159         if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+1160             return new CollectorImpl&lt;&gt;(mangledFactory, accumulator, merger, CH_ID);
+1161         }
+1162         else {
+1163             @SuppressWarnings("unchecked")
+1164             Function&lt;A, A&gt; downstreamFinisher = (Function&lt;A, A&gt;) downstream.finisher();
+1165             Function&lt;Map&lt;K, A&gt;, M&gt; finisher = intermediate -&gt; {
+1166                 intermediate.replaceAll((k, v) -&gt; downstreamFinisher.apply(v));
+1167                 @SuppressWarnings("unchecked")
+1168                 M castResult = (M) intermediate;
+1169                 return castResult;
+1170             };
+1171             return new CollectorImpl&lt;&gt;(mangledFactory, accumulator, merger, finisher, CH_NOID);
+1172         }
+1173     }
+1174 
+1175     /**
+1176      * Returns a concurrent {@code Collector} implementing a "group by"
+1177      * operation on input elements of type {@code T}, grouping elements
+1178      * according to a classification function.
+1179      *
+1180      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1181      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1182      *
+1183      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1184      * The collector produces a {@code ConcurrentMap&lt;K, List&lt;T&gt;&gt;} whose keys are the
+1185      * values resulting from applying the classification function to the input
+1186      * elements, and whose corresponding values are {@code List}s containing the
+1187      * input elements which map to the associated key under the classification
+1188      * function.
+1189      *
+1190      * &lt;p&gt;There are no guarantees on the type, mutability, or serializability
+1191      * of the {@code ConcurrentMap} or {@code List} objects returned, or of the
+1192      * thread-safety of the {@code List} objects returned.
+1193      * @implSpec
+1194      * This produces a result similar to:
+1195      * &lt;pre&gt;{@code
+1196      *     groupingByConcurrent(classifier, toList());
+1197      * }&lt;/pre&gt;
+1198      *
+1199      * @param &lt;T&gt; the type of the input elements
+1200      * @param &lt;K&gt; the type of the keys
+1201      * @param classifier a classifier function mapping input elements to keys
+1202      * @return a concurrent, unordered {@code Collector} implementing the group-by operation
+1203      *
+1204      * @see #groupingBy(Function)
+1205      * @see #groupingByConcurrent(Function, Collector)
+1206      * @see #groupingByConcurrent(Function, Supplier, Collector)
+1207      */
+1208     public static &lt;T, K&gt;
+1209     Collector&lt;T, ?, ConcurrentMap&lt;K, List&lt;T&gt;&gt;&gt;
+1210     groupingByConcurrent(Function&lt;? super T, ? extends K&gt; classifier) {
+1211         return groupingByConcurrent(classifier, ConcurrentHashMap::new, toList());
+1212     }
+1213 
+1214     /**
+1215      * Returns a concurrent {@code Collector} implementing a cascaded "group by"
+1216      * operation on input elements of type {@code T}, grouping elements
+1217      * according to a classification function, and then performing a reduction
+1218      * operation on the values associated with a given key using the specified
+1219      * downstream {@code Collector}.
+1220      *
+1221      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1222      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1223      *
+1224      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1225      * The downstream collector operates on elements of type {@code T} and
+1226      * produces a result of type {@code D}. The resulting collector produces a
+1227      * {@code ConcurrentMap&lt;K, D&gt;}.
+1228      *
+1229      * &lt;p&gt;There are no guarantees on the type, mutability, or serializability
+1230      * of the {@code ConcurrentMap} returned.
+1231      *
+1232      * &lt;p&gt;For example, to compute the set of last names of people in each city,
+1233      * where the city names are sorted:
+1234      * &lt;pre&gt;{@code
+1235      * ConcurrentMap&lt;City, Set&lt;String&gt;&gt; namesByCity
+1236      *   = people.stream().collect(
+1237      *     groupingByConcurrent(Person::getCity,
+1238      *                          mapping(Person::getLastName,
+1239      *                                  toSet())));
+1240      * }&lt;/pre&gt;
+1241      *
+1242      * @param &lt;T&gt; the type of the input elements
+1243      * @param &lt;K&gt; the type of the keys
+1244      * @param &lt;A&gt; the intermediate accumulation type of the downstream collector
+1245      * @param &lt;D&gt; the result type of the downstream reduction
+1246      * @param classifier a classifier function mapping input elements to keys
+1247      * @param downstream a {@code Collector} implementing the downstream reduction
+1248      * @return a concurrent, unordered {@code Collector} implementing the cascaded group-by operation
+1249      *
+1250      * @see #groupingBy(Function, Collector)
+1251      * @see #groupingByConcurrent(Function)
+1252      * @see #groupingByConcurrent(Function, Supplier, Collector)
+1253      */
+1254     public static &lt;T, K, A, D&gt;
+1255     Collector&lt;T, ?, ConcurrentMap&lt;K, D&gt;&gt; groupingByConcurrent(Function&lt;? super T, ? extends K&gt; classifier,
+1256                                                               Collector&lt;? super T, A, D&gt; downstream) {
+1257         return groupingByConcurrent(classifier, ConcurrentHashMap::new, downstream);
+1258     }
+1259 
+1260     /**
+1261      * Returns a concurrent {@code Collector} implementing a cascaded "group by"
+1262      * operation on input elements of type {@code T}, grouping elements
+1263      * according to a classification function, and then performing a reduction
+1264      * operation on the values associated with a given key using the specified
+1265      * downstream {@code Collector}.  The {@code ConcurrentMap} produced by the
+1266      * Collector is created with the supplied factory function.
+1267      *
+1268      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1269      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1270      *
+1271      * &lt;p&gt;The classification function maps elements to some key type {@code K}.
+1272      * The downstream collector operates on elements of type {@code T} and
+1273      * produces a result of type {@code D}. The resulting collector produces a
+1274      * {@code ConcurrentMap&lt;K, D&gt;}.
+1275      *
+1276      * &lt;p&gt;For example, to compute the set of last names of people in each city,
+1277      * where the city names are sorted:
+1278      * &lt;pre&gt;{@code
+1279      * ConcurrentMap&lt;City, Set&lt;String&gt;&gt; namesByCity
+1280      *   = people.stream().collect(
+1281      *     groupingByConcurrent(Person::getCity,
+1282      *                          ConcurrentSkipListMap::new,
+1283      *                          mapping(Person::getLastName,
+1284      *                                  toSet())));
+1285      * }&lt;/pre&gt;
+1286      *
+1287      * @param &lt;T&gt; the type of the input elements
+1288      * @param &lt;K&gt; the type of the keys
+1289      * @param &lt;A&gt; the intermediate accumulation type of the downstream collector
+1290      * @param &lt;D&gt; the result type of the downstream reduction
+1291      * @param &lt;M&gt; the type of the resulting {@code ConcurrentMap}
+1292      * @param classifier a classifier function mapping input elements to keys
+1293      * @param downstream a {@code Collector} implementing the downstream reduction
+1294      * @param mapFactory a supplier providing a new empty {@code ConcurrentMap}
+1295      *                   into which the results will be inserted
+1296      * @return a concurrent, unordered {@code Collector} implementing the cascaded group-by operation
+1297      *
+1298      * @see #groupingByConcurrent(Function)
+1299      * @see #groupingByConcurrent(Function, Collector)
+1300      * @see #groupingBy(Function, Supplier, Collector)
+1301      */
+1302     public static &lt;T, K, A, D, M extends ConcurrentMap&lt;K, D&gt;&gt;
+1303     Collector&lt;T, ?, M&gt; groupingByConcurrent(Function&lt;? super T, ? extends K&gt; classifier,
+1304                                             Supplier&lt;M&gt; mapFactory,
+1305                                             Collector&lt;? super T, A, D&gt; downstream) {
+1306         Supplier&lt;A&gt; downstreamSupplier = downstream.supplier();
+1307         BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+1308         BinaryOperator&lt;ConcurrentMap&lt;K, A&gt;&gt; merger = Collectors.&lt;K, A, ConcurrentMap&lt;K, A&gt;&gt;mapMerger(downstream.combiner());
+1309         @SuppressWarnings("unchecked")
+1310         Supplier&lt;ConcurrentMap&lt;K, A&gt;&gt; mangledFactory = (Supplier&lt;ConcurrentMap&lt;K, A&gt;&gt;) mapFactory;
+1311         BiConsumer&lt;ConcurrentMap&lt;K, A&gt;, T&gt; accumulator;
+1312         if (downstream.characteristics().contains(Collector.Characteristics.CONCURRENT)) {
+1313             accumulator = (m, t) -&gt; {
+1314                 K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+1315                 A resultContainer = m.computeIfAbsent(key, k -&gt; downstreamSupplier.get());
+1316                 downstreamAccumulator.accept(resultContainer, t);
+1317             };
+1318         }
+1319         else {
+1320             accumulator = (m, t) -&gt; {
+1321                 K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+1322                 A resultContainer = m.computeIfAbsent(key, k -&gt; downstreamSupplier.get());
+1323                 synchronized (resultContainer) {
+1324                     downstreamAccumulator.accept(resultContainer, t);
+1325                 }
+1326             };
+1327         }
+1328 
+1329         if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+1330             return new CollectorImpl&lt;&gt;(mangledFactory, accumulator, merger, CH_CONCURRENT_ID);
+1331         }
+1332         else {
+1333             @SuppressWarnings("unchecked")
+1334             Function&lt;A, A&gt; downstreamFinisher = (Function&lt;A, A&gt;) downstream.finisher();
+1335             Function&lt;ConcurrentMap&lt;K, A&gt;, M&gt; finisher = intermediate -&gt; {
+1336                 intermediate.replaceAll((k, v) -&gt; downstreamFinisher.apply(v));
+1337                 @SuppressWarnings("unchecked")
+1338                 M castResult = (M) intermediate;
+1339                 return castResult;
+1340             };
+1341             return new CollectorImpl&lt;&gt;(mangledFactory, accumulator, merger, finisher, CH_CONCURRENT_NOID);
+1342         }
+1343     }
+1344 
+1345     /**
+1346      * Returns a {@code Collector} which partitions the input elements according
+1347      * to a {@code Predicate}, and organizes them into a
+1348      * {@code Map&lt;Boolean, List&lt;T&gt;&gt;}.
+1349      *
+1350      * The returned {@code Map} always contains mappings for both
+1351      * {@code false} and {@code true} keys.
+1352      * There are no guarantees on the type, mutability,
+1353      * serializability, or thread-safety of the {@code Map} or {@code List}
+1354      * returned.
+1355      *
+1356      * @apiNote
+1357      * If a partition has no elements, its value in the result Map will be
+1358      * an empty List.
+1359      *
+1360      * @param &lt;T&gt; the type of the input elements
+1361      * @param predicate a predicate used for classifying input elements
+1362      * @return a {@code Collector} implementing the partitioning operation
+1363      *
+1364      * @see #partitioningBy(Predicate, Collector)
+1365      */
+1366     public static &lt;T&gt;
+1367     Collector&lt;T, ?, Map&lt;Boolean, List&lt;T&gt;&gt;&gt; partitioningBy(Predicate&lt;? super T&gt; predicate) {
+1368         return partitioningBy(predicate, toList());
+1369     }
+1370 
+1371     /**
+1372      * Returns a {@code Collector} which partitions the input elements according
+1373      * to a {@code Predicate}, reduces the values in each partition according to
+1374      * another {@code Collector}, and organizes them into a
+1375      * {@code Map&lt;Boolean, D&gt;} whose values are the result of the downstream
+1376      * reduction.
+1377      *
+1378      * &lt;p&gt;
+1379      * The returned {@code Map} always contains mappings for both
+1380      * {@code false} and {@code true} keys.
+1381      * There are no guarantees on the type, mutability,
+1382      * serializability, or thread-safety of the {@code Map} returned.
+1383      *
+1384      * @apiNote
+1385      * If a partition has no elements, its value in the result Map will be
+1386      * obtained by calling the downstream collector's supplier function and then
+1387      * applying the finisher function.
+1388      *
+1389      * @param &lt;T&gt; the type of the input elements
+1390      * @param &lt;A&gt; the intermediate accumulation type of the downstream collector
+1391      * @param &lt;D&gt; the result type of the downstream reduction
+1392      * @param predicate a predicate used for classifying input elements
+1393      * @param downstream a {@code Collector} implementing the downstream
+1394      *                   reduction
+1395      * @return a {@code Collector} implementing the cascaded partitioning
+1396      *         operation
+1397      *
+1398      * @see #partitioningBy(Predicate)
+1399      */
+1400     public static &lt;T, D, A&gt;
+1401     Collector&lt;T, ?, Map&lt;Boolean, D&gt;&gt; partitioningBy(Predicate&lt;? super T&gt; predicate,
+1402                                                     Collector&lt;? super T, A, D&gt; downstream) {
+1403         BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
+1404         BiConsumer&lt;Partition&lt;A&gt;, T&gt; accumulator = (result, t) -&gt;
+1405                 downstreamAccumulator.accept(predicate.test(t) ? result.forTrue : result.forFalse, t);
+1406         BinaryOperator&lt;A&gt; op = downstream.combiner();
+1407         BinaryOperator&lt;Partition&lt;A&gt;&gt; merger = (left, right) -&gt;
+1408                 new Partition&lt;&gt;(op.apply(left.forTrue, right.forTrue),
+1409                                 op.apply(left.forFalse, right.forFalse));
+1410         Supplier&lt;Partition&lt;A&gt;&gt; supplier = () -&gt;
+1411                 new Partition&lt;&gt;(downstream.supplier().get(),
+1412                                 downstream.supplier().get());
+1413         if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+1414             return new CollectorImpl&lt;&gt;(supplier, accumulator, merger, CH_ID);
+1415         }
+1416         else {
+1417             Function&lt;Partition&lt;A&gt;, Map&lt;Boolean, D&gt;&gt; finisher = par -&gt;
+1418                     new Partition&lt;&gt;(downstream.finisher().apply(par.forTrue),
+1419                                     downstream.finisher().apply(par.forFalse));
+1420             return new CollectorImpl&lt;&gt;(supplier, accumulator, merger, finisher, CH_NOID);
+1421         }
+1422     }
+1423 
+1424     /**
+1425      * Returns a {@code Collector} that accumulates elements into a
+1426      * {@code Map} whose keys and values are the result of applying the provided
+1427      * mapping functions to the input elements.
+1428      *
+1429      * &lt;p&gt;If the mapped keys contain duplicates (according to
+1430      * {@link Object#equals(Object)}), an {@code IllegalStateException} is
+1431      * thrown when the collection operation is performed.  If the mapped keys
+1432      * might have duplicates, use {@link #toMap(Function, Function, BinaryOperator)}
+1433      * instead.
+1434      *
+1435      * &lt;p&gt;There are no guarantees on the type, mutability, serializability,
+1436      * or thread-safety of the {@code Map} returned.
+1437      *
+1438      * @apiNote
+1439      * It is common for either the key or the value to be the input elements.
+1440      * In this case, the utility method
+1441      * {@link java.util.function.Function#identity()} may be helpful.
+1442      * For example, the following produces a {@code Map} mapping
+1443      * students to their grade point average:
+1444      * &lt;pre&gt;{@code
+1445      * Map&lt;Student, Double&gt; studentToGPA
+1446      *   = students.stream().collect(
+1447      *     toMap(Function.identity(),
+1448      *           student -&gt; computeGPA(student)));
+1449      * }&lt;/pre&gt;
+1450      * And the following produces a {@code Map} mapping a unique identifier to
+1451      * students:
+1452      * &lt;pre&gt;{@code
+1453      * Map&lt;String, Student&gt; studentIdToStudent
+1454      *   = students.stream().collect(
+1455      *     toMap(Student::getId,
+1456      *           Function.identity()));
+1457      * }&lt;/pre&gt;
+1458      *
+1459      * @implNote
+1460      * The returned {@code Collector} is not concurrent.  For parallel stream
+1461      * pipelines, the {@code combiner} function operates by merging the keys
+1462      * from one map into another, which can be an expensive operation.  If it is
+1463      * not required that results are inserted into the {@code Map} in encounter
+1464      * order, using {@link #toConcurrentMap(Function, Function)}
+1465      * may offer better parallel performance.
+1466      *
+1467      * @param &lt;T&gt; the type of the input elements
+1468      * @param &lt;K&gt; the output type of the key mapping function
+1469      * @param &lt;U&gt; the output type of the value mapping function
+1470      * @param keyMapper a mapping function to produce keys
+1471      * @param valueMapper a mapping function to produce values
+1472      * @return a {@code Collector} which collects elements into a {@code Map}
+1473      * whose keys and values are the result of applying mapping functions to
+1474      * the input elements
+1475      *
+1476      * @see #toMap(Function, Function, BinaryOperator)
+1477      * @see #toMap(Function, Function, BinaryOperator, Supplier)
+1478      * @see #toConcurrentMap(Function, Function)
+1479      */
+1480     public static &lt;T, K, U&gt;
+1481     Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1482                                     Function&lt;? super T, ? extends U&gt; valueMapper) {
+1483         return new CollectorImpl&lt;&gt;(HashMap::new,
+<a name="16" id="anc16"></a><span class="new">1484                                    HashMap::new,</span>
+1485                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+1486                                    uniqKeysMapMerger(),
+1487                                    CH_ID);
+1488     }
+1489 
+1490     /**
+1491      * Returns a {@code Collector} that accumulates the input elements into an
+1492      * &lt;a href="../Map.html#unmodifiable"&gt;unmodifiable Map&lt;/a&gt;,
+1493      * whose keys and values are the result of applying the provided
+1494      * mapping functions to the input elements.
+1495      *
+1496      * &lt;p&gt;If the mapped keys contain duplicates (according to
+1497      * {@link Object#equals(Object)}), an {@code IllegalStateException} is
+1498      * thrown when the collection operation is performed.  If the mapped keys
+1499      * might have duplicates, use {@link #toUnmodifiableMap(Function, Function, BinaryOperator)}
+1500      * to handle merging of the values.
+1501      *
+1502      * &lt;p&gt;The returned Collector disallows null keys and values. If either mapping function
+1503      * returns null, {@code NullPointerException} will be thrown.
+1504      *
+1505      * @param &lt;T&gt; the type of the input elements
+1506      * @param &lt;K&gt; the output type of the key mapping function
+1507      * @param &lt;U&gt; the output type of the value mapping function
+1508      * @param keyMapper a mapping function to produce keys, must be non-null
+1509      * @param valueMapper a mapping function to produce values, must be non-null
+1510      * @return a {@code Collector} that accumulates the input elements into an
+1511      * &lt;a href="../Map.html#unmodifiable"&gt;unmodifiable Map&lt;/a&gt;, whose keys and values
+1512      * are the result of applying the provided mapping functions to the input elements
+1513      * @throws NullPointerException if either keyMapper or valueMapper is null
+1514      *
+1515      * @see #toUnmodifiableMap(Function, Function, BinaryOperator)
+1516      * @since 10
+1517      */
+1518     @SuppressWarnings({"rawtypes", "unchecked"})
+1519     public static &lt;T, K, U&gt;
+1520     Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toUnmodifiableMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1521                                                 Function&lt;? super T, ? extends U&gt; valueMapper) {
+1522         Objects.requireNonNull(keyMapper, "keyMapper");
+1523         Objects.requireNonNull(valueMapper, "valueMapper");
+1524         return collectingAndThen(
+1525                 toMap(keyMapper, valueMapper),
+1526                 map -&gt; (Map&lt;K,U&gt;)Map.ofEntries(map.entrySet().toArray(new Map.Entry[0])));
+1527     }
+1528 
+1529     /**
+1530      * Returns a {@code Collector} that accumulates elements into a
+1531      * {@code Map} whose keys and values are the result of applying the provided
+1532      * mapping functions to the input elements.
+1533      *
+1534      * &lt;p&gt;If the mapped
+1535      * keys contain duplicates (according to {@link Object#equals(Object)}),
+1536      * the value mapping function is applied to each equal element, and the
+1537      * results are merged using the provided merging function.
+1538      *
+1539      * &lt;p&gt;There are no guarantees on the type, mutability, serializability,
+1540      * or thread-safety of the {@code Map} returned.
+1541      *
+1542      * @apiNote
+1543      * There are multiple ways to deal with collisions between multiple elements
+1544      * mapping to the same key.  The other forms of {@code toMap} simply use
+1545      * a merge function that throws unconditionally, but you can easily write
+1546      * more flexible merge policies.  For example, if you have a stream
+1547      * of {@code Person}, and you want to produce a "phone book" mapping name to
+1548      * address, but it is possible that two persons have the same name, you can
+1549      * do as follows to gracefully deal with these collisions, and produce a
+1550      * {@code Map} mapping names to a concatenated list of addresses:
+1551      * &lt;pre&gt;{@code
+1552      * Map&lt;String, String&gt; phoneBook
+1553      *   = people.stream().collect(
+1554      *     toMap(Person::getName,
+1555      *           Person::getAddress,
+1556      *           (s, a) -&gt; s + ", " + a));
+1557      * }&lt;/pre&gt;
+1558      *
+1559      * @implNote
+1560      * The returned {@code Collector} is not concurrent.  For parallel stream
+1561      * pipelines, the {@code combiner} function operates by merging the keys
+1562      * from one map into another, which can be an expensive operation.  If it is
+1563      * not required that results are merged into the {@code Map} in encounter
+1564      * order, using {@link #toConcurrentMap(Function, Function, BinaryOperator)}
+1565      * may offer better parallel performance.
+1566      *
+1567      * @param &lt;T&gt; the type of the input elements
+1568      * @param &lt;K&gt; the output type of the key mapping function
+1569      * @param &lt;U&gt; the output type of the value mapping function
+1570      * @param keyMapper a mapping function to produce keys
+1571      * @param valueMapper a mapping function to produce values
+1572      * @param mergeFunction a merge function, used to resolve collisions between
+1573      *                      values associated with the same key, as supplied
+1574      *                      to {@link Map#merge(Object, Object, BiFunction)}
+1575      * @return a {@code Collector} which collects elements into a {@code Map}
+1576      * whose keys are the result of applying a key mapping function to the input
+1577      * elements, and whose values are the result of applying a value mapping
+1578      * function to all input elements equal to the key and combining them
+1579      * using the merge function
+1580      *
+1581      * @see #toMap(Function, Function)
+1582      * @see #toMap(Function, Function, BinaryOperator, Supplier)
+1583      * @see #toConcurrentMap(Function, Function, BinaryOperator)
+1584      */
+1585     public static &lt;T, K, U&gt;
+1586     Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1587                                     Function&lt;? super T, ? extends U&gt; valueMapper,
+1588                                     BinaryOperator&lt;U&gt; mergeFunction) {
+1589         return toMap(keyMapper, valueMapper, mergeFunction, HashMap::new);
+1590     }
+1591 
+1592 
+1593     /**
+1594      * Returns a {@code Collector} that accumulates the input elements into an
+1595      * &lt;a href="../Map.html#unmodifiable"&gt;unmodifiable Map&lt;/a&gt;,
+1596      * whose keys and values are the result of applying the provided
+1597      * mapping functions to the input elements.
+1598      *
+1599      * &lt;p&gt;If the mapped
+1600      * keys contain duplicates (according to {@link Object#equals(Object)}),
+1601      * the value mapping function is applied to each equal element, and the
+1602      * results are merged using the provided merging function.
+1603      *
+1604      * &lt;p&gt;The returned Collector disallows null keys and values. If either mapping function
+1605      * returns null, {@code NullPointerException} will be thrown.
+1606      *
+1607      * @param &lt;T&gt; the type of the input elements
+1608      * @param &lt;K&gt; the output type of the key mapping function
+1609      * @param &lt;U&gt; the output type of the value mapping function
+1610      * @param keyMapper a mapping function to produce keys, must be non-null
+1611      * @param valueMapper a mapping function to produce values, must be non-null
+1612      * @param mergeFunction a merge function, used to resolve collisions between
+1613      *                      values associated with the same key, as supplied
+1614      *                      to {@link Map#merge(Object, Object, BiFunction)},
+1615      *                      must be non-null
+1616      * @return a {@code Collector} that accumulates the input elements into an
+1617      * &lt;a href="../Map.html#unmodifiable"&gt;unmodifiable Map&lt;/a&gt;, whose keys and values
+1618      * are the result of applying the provided mapping functions to the input elements
+1619      * @throws NullPointerException if the keyMapper, valueMapper, or mergeFunction is null
+1620      *
+1621      * @see #toUnmodifiableMap(Function, Function)
+1622      * @since 10
+1623      */
+1624     @SuppressWarnings({"rawtypes", "unchecked"})
+1625     public static &lt;T, K, U&gt;
+1626     Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toUnmodifiableMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1627                                                 Function&lt;? super T, ? extends U&gt; valueMapper,
+1628                                                 BinaryOperator&lt;U&gt; mergeFunction) {
+1629         Objects.requireNonNull(keyMapper, "keyMapper");
+1630         Objects.requireNonNull(valueMapper, "valueMapper");
+1631         Objects.requireNonNull(mergeFunction, "mergeFunction");
+1632         return collectingAndThen(
+1633                 toMap(keyMapper, valueMapper, mergeFunction, HashMap::new),
+1634                 map -&gt; (Map&lt;K,U&gt;)Map.ofEntries(map.entrySet().toArray(new Map.Entry[0])));
+1635     }
+1636 
+1637     /**
+1638      * Returns a {@code Collector} that accumulates elements into a
+1639      * {@code Map} whose keys and values are the result of applying the provided
+1640      * mapping functions to the input elements.
+1641      *
+1642      * &lt;p&gt;If the mapped
+1643      * keys contain duplicates (according to {@link Object#equals(Object)}),
+1644      * the value mapping function is applied to each equal element, and the
+1645      * results are merged using the provided merging function.  The {@code Map}
+1646      * is created by a provided supplier function.
+1647      *
+1648      * @implNote
+1649      * The returned {@code Collector} is not concurrent.  For parallel stream
+1650      * pipelines, the {@code combiner} function operates by merging the keys
+1651      * from one map into another, which can be an expensive operation.  If it is
+1652      * not required that results are merged into the {@code Map} in encounter
+1653      * order, using {@link #toConcurrentMap(Function, Function, BinaryOperator, Supplier)}
+1654      * may offer better parallel performance.
+1655      *
+1656      * @param &lt;T&gt; the type of the input elements
+1657      * @param &lt;K&gt; the output type of the key mapping function
+1658      * @param &lt;U&gt; the output type of the value mapping function
+1659      * @param &lt;M&gt; the type of the resulting {@code Map}
+1660      * @param keyMapper a mapping function to produce keys
+1661      * @param valueMapper a mapping function to produce values
+1662      * @param mergeFunction a merge function, used to resolve collisions between
+1663      *                      values associated with the same key, as supplied
+1664      *                      to {@link Map#merge(Object, Object, BiFunction)}
+1665      * @param mapFactory a supplier providing a new empty {@code Map}
+1666      *                   into which the results will be inserted
+1667      * @return a {@code Collector} which collects elements into a {@code Map}
+1668      * whose keys are the result of applying a key mapping function to the input
+1669      * elements, and whose values are the result of applying a value mapping
+1670      * function to all input elements equal to the key and combining them
+1671      * using the merge function
+1672      *
+1673      * @see #toMap(Function, Function)
+1674      * @see #toMap(Function, Function, BinaryOperator)
+1675      * @see #toConcurrentMap(Function, Function, BinaryOperator, Supplier)
+1676      */
+1677     public static &lt;T, K, U, M extends Map&lt;K, U&gt;&gt;
+1678     Collector&lt;T, ?, M&gt; toMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1679                              Function&lt;? super T, ? extends U&gt; valueMapper,
+1680                              BinaryOperator&lt;U&gt; mergeFunction,
+1681                              Supplier&lt;M&gt; mapFactory) {
+1682         BiConsumer&lt;M, T&gt; accumulator
+1683                 = (map, element) -&gt; map.merge(keyMapper.apply(element),
+1684                                               valueMapper.apply(element), mergeFunction);
+1685         return new CollectorImpl&lt;&gt;(mapFactory, accumulator, mapMerger(mergeFunction), CH_ID);
+1686     }
+1687 
+1688     /**
+1689      * Returns a concurrent {@code Collector} that accumulates elements into a
+1690      * {@code ConcurrentMap} whose keys and values are the result of applying
+1691      * the provided mapping functions to the input elements.
+1692      *
+1693      * &lt;p&gt;If the mapped keys contain duplicates (according to
+1694      * {@link Object#equals(Object)}), an {@code IllegalStateException} is
+1695      * thrown when the collection operation is performed.  If the mapped keys
+1696      * may have duplicates, use
+1697      * {@link #toConcurrentMap(Function, Function, BinaryOperator)} instead.
+1698      *
+1699      * &lt;p&gt;There are no guarantees on the type, mutability, or serializability
+1700      * of the {@code ConcurrentMap} returned.
+1701      *
+1702      * @apiNote
+1703      * It is common for either the key or the value to be the input elements.
+1704      * In this case, the utility method
+1705      * {@link java.util.function.Function#identity()} may be helpful.
+1706      * For example, the following produces a {@code ConcurrentMap} mapping
+1707      * students to their grade point average:
+1708      * &lt;pre&gt;{@code
+1709      * ConcurrentMap&lt;Student, Double&gt; studentToGPA
+1710      *   = students.stream().collect(
+1711      *     toConcurrentMap(Function.identity(),
+1712      *                     student -&gt; computeGPA(student)));
+1713      * }&lt;/pre&gt;
+1714      * And the following produces a {@code ConcurrentMap} mapping a
+1715      * unique identifier to students:
+1716      * &lt;pre&gt;{@code
+1717      * ConcurrentMap&lt;String, Student&gt; studentIdToStudent
+1718      *   = students.stream().collect(
+1719      *     toConcurrentMap(Student::getId,
+1720      *                     Function.identity()));
+1721      * }&lt;/pre&gt;
+1722      *
+1723      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1724      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1725      *
+1726      * @param &lt;T&gt; the type of the input elements
+1727      * @param &lt;K&gt; the output type of the key mapping function
+1728      * @param &lt;U&gt; the output type of the value mapping function
+1729      * @param keyMapper the mapping function to produce keys
+1730      * @param valueMapper the mapping function to produce values
+1731      * @return a concurrent, unordered {@code Collector} which collects elements into a
+1732      * {@code ConcurrentMap} whose keys are the result of applying a key mapping
+1733      * function to the input elements, and whose values are the result of
+1734      * applying a value mapping function to the input elements
+1735      *
+1736      * @see #toMap(Function, Function)
+1737      * @see #toConcurrentMap(Function, Function, BinaryOperator)
+1738      * @see #toConcurrentMap(Function, Function, BinaryOperator, Supplier)
+1739      */
+1740     public static &lt;T, K, U&gt;
+1741     Collector&lt;T, ?, ConcurrentMap&lt;K,U&gt;&gt; toConcurrentMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1742                                                         Function&lt;? super T, ? extends U&gt; valueMapper) {
+1743         return new CollectorImpl&lt;&gt;(ConcurrentHashMap::new,
+<a name="17" id="anc17"></a><span class="new">1744                                    ConcurrentHashMap::new,</span>
+1745                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
+1746                                    uniqKeysMapMerger(),
+1747                                    CH_CONCURRENT_ID);
+1748     }
+1749 
+1750     /**
+1751      * Returns a concurrent {@code Collector} that accumulates elements into a
+1752      * {@code ConcurrentMap} whose keys and values are the result of applying
+1753      * the provided mapping functions to the input elements.
+1754      *
+1755      * &lt;p&gt;If the mapped keys contain duplicates (according to {@link Object#equals(Object)}),
+1756      * the value mapping function is applied to each equal element, and the
+1757      * results are merged using the provided merging function.
+1758      *
+1759      * &lt;p&gt;There are no guarantees on the type, mutability, or serializability
+1760      * of the {@code ConcurrentMap} returned.
+1761      *
+1762      * @apiNote
+1763      * There are multiple ways to deal with collisions between multiple elements
+1764      * mapping to the same key.  The other forms of {@code toConcurrentMap} simply use
+1765      * a merge function that throws unconditionally, but you can easily write
+1766      * more flexible merge policies.  For example, if you have a stream
+1767      * of {@code Person}, and you want to produce a "phone book" mapping name to
+1768      * address, but it is possible that two persons have the same name, you can
+1769      * do as follows to gracefully deal with these collisions, and produce a
+1770      * {@code ConcurrentMap} mapping names to a concatenated list of addresses:
+1771      * &lt;pre&gt;{@code
+1772      * ConcurrentMap&lt;String, String&gt; phoneBook
+1773      *   = people.stream().collect(
+1774      *     toConcurrentMap(Person::getName,
+1775      *                     Person::getAddress,
+1776      *                     (s, a) -&gt; s + ", " + a));
+1777      * }&lt;/pre&gt;
+1778      *
+1779      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1780      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1781      *
+1782      * @param &lt;T&gt; the type of the input elements
+1783      * @param &lt;K&gt; the output type of the key mapping function
+1784      * @param &lt;U&gt; the output type of the value mapping function
+1785      * @param keyMapper a mapping function to produce keys
+1786      * @param valueMapper a mapping function to produce values
+1787      * @param mergeFunction a merge function, used to resolve collisions between
+1788      *                      values associated with the same key, as supplied
+1789      *                      to {@link Map#merge(Object, Object, BiFunction)}
+1790      * @return a concurrent, unordered {@code Collector} which collects elements into a
+1791      * {@code ConcurrentMap} whose keys are the result of applying a key mapping
+1792      * function to the input elements, and whose values are the result of
+1793      * applying a value mapping function to all input elements equal to the key
+1794      * and combining them using the merge function
+1795      *
+1796      * @see #toConcurrentMap(Function, Function)
+1797      * @see #toConcurrentMap(Function, Function, BinaryOperator, Supplier)
+1798      * @see #toMap(Function, Function, BinaryOperator)
+1799      */
+1800     public static &lt;T, K, U&gt;
+1801     Collector&lt;T, ?, ConcurrentMap&lt;K,U&gt;&gt;
+1802     toConcurrentMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1803                     Function&lt;? super T, ? extends U&gt; valueMapper,
+1804                     BinaryOperator&lt;U&gt; mergeFunction) {
+1805         return toConcurrentMap(keyMapper, valueMapper, mergeFunction, ConcurrentHashMap::new);
+1806     }
+1807 
+1808     /**
+1809      * Returns a concurrent {@code Collector} that accumulates elements into a
+1810      * {@code ConcurrentMap} whose keys and values are the result of applying
+1811      * the provided mapping functions to the input elements.
+1812      *
+1813      * &lt;p&gt;If the mapped keys contain duplicates (according to {@link Object#equals(Object)}),
+1814      * the value mapping function is applied to each equal element, and the
+1815      * results are merged using the provided merging function.  The
+1816      * {@code ConcurrentMap} is created by a provided supplier function.
+1817      *
+1818      * &lt;p&gt;This is a {@link Collector.Characteristics#CONCURRENT concurrent} and
+1819      * {@link Collector.Characteristics#UNORDERED unordered} Collector.
+1820      *
+1821      * @param &lt;T&gt; the type of the input elements
+1822      * @param &lt;K&gt; the output type of the key mapping function
+1823      * @param &lt;U&gt; the output type of the value mapping function
+1824      * @param &lt;M&gt; the type of the resulting {@code ConcurrentMap}
+1825      * @param keyMapper a mapping function to produce keys
+1826      * @param valueMapper a mapping function to produce values
+1827      * @param mergeFunction a merge function, used to resolve collisions between
+1828      *                      values associated with the same key, as supplied
+1829      *                      to {@link Map#merge(Object, Object, BiFunction)}
+1830      * @param mapFactory a supplier providing a new empty {@code ConcurrentMap}
+1831      *                   into which the results will be inserted
+1832      * @return a concurrent, unordered {@code Collector} which collects elements into a
+1833      * {@code ConcurrentMap} whose keys are the result of applying a key mapping
+1834      * function to the input elements, and whose values are the result of
+1835      * applying a value mapping function to all input elements equal to the key
+1836      * and combining them using the merge function
+1837      *
+1838      * @see #toConcurrentMap(Function, Function)
+1839      * @see #toConcurrentMap(Function, Function, BinaryOperator)
+1840      * @see #toMap(Function, Function, BinaryOperator, Supplier)
+1841      */
+1842     public static &lt;T, K, U, M extends ConcurrentMap&lt;K, U&gt;&gt;
+1843     Collector&lt;T, ?, M&gt; toConcurrentMap(Function&lt;? super T, ? extends K&gt; keyMapper,
+1844                                        Function&lt;? super T, ? extends U&gt; valueMapper,
+1845                                        BinaryOperator&lt;U&gt; mergeFunction,
+1846                                        Supplier&lt;M&gt; mapFactory) {
+1847         BiConsumer&lt;M, T&gt; accumulator
+1848                 = (map, element) -&gt; map.merge(keyMapper.apply(element),
+1849                                               valueMapper.apply(element), mergeFunction);
+1850         return new CollectorImpl&lt;&gt;(mapFactory, accumulator, mapMerger(mergeFunction), CH_CONCURRENT_ID);
+1851     }
+1852 
+1853     /**
+1854      * Returns a {@code Collector} which applies an {@code int}-producing
+1855      * mapping function to each input element, and returns summary statistics
+1856      * for the resulting values.
+1857      *
+1858      * @param &lt;T&gt; the type of the input elements
+1859      * @param mapper a mapping function to apply to each element
+1860      * @return a {@code Collector} implementing the summary-statistics reduction
+1861      *
+1862      * @see #summarizingDouble(ToDoubleFunction)
+1863      * @see #summarizingLong(ToLongFunction)
+1864      */
+1865     public static &lt;T&gt;
+1866     Collector&lt;T, ?, IntSummaryStatistics&gt; summarizingInt(ToIntFunction&lt;? super T&gt; mapper) {
+1867         return new CollectorImpl&lt;T, IntSummaryStatistics, IntSummaryStatistics&gt;(
+1868                 IntSummaryStatistics::new,
+1869                 (r, t) -&gt; r.accept(mapper.applyAsInt(t)),
+1870                 (l, r) -&gt; { l.combine(r); return l; }, CH_ID);
+1871     }
+1872 
+1873     /**
+1874      * Returns a {@code Collector} which applies an {@code long}-producing
+1875      * mapping function to each input element, and returns summary statistics
+1876      * for the resulting values.
+1877      *
+1878      * @param &lt;T&gt; the type of the input elements
+1879      * @param mapper the mapping function to apply to each element
+1880      * @return a {@code Collector} implementing the summary-statistics reduction
+1881      *
+1882      * @see #summarizingDouble(ToDoubleFunction)
+1883      * @see #summarizingInt(ToIntFunction)
+1884      */
+1885     public static &lt;T&gt;
+1886     Collector&lt;T, ?, LongSummaryStatistics&gt; summarizingLong(ToLongFunction&lt;? super T&gt; mapper) {
+1887         return new CollectorImpl&lt;T, LongSummaryStatistics, LongSummaryStatistics&gt;(
+1888                 LongSummaryStatistics::new,
+1889                 (r, t) -&gt; r.accept(mapper.applyAsLong(t)),
+1890                 (l, r) -&gt; { l.combine(r); return l; }, CH_ID);
+1891     }
+1892 
+1893     /**
+1894      * Returns a {@code Collector} which applies an {@code double}-producing
+1895      * mapping function to each input element, and returns summary statistics
+1896      * for the resulting values.
+1897      *
+1898      * @param &lt;T&gt; the type of the input elements
+1899      * @param mapper a mapping function to apply to each element
+1900      * @return a {@code Collector} implementing the summary-statistics reduction
+1901      *
+1902      * @see #summarizingLong(ToLongFunction)
+1903      * @see #summarizingInt(ToIntFunction)
+1904      */
+1905     public static &lt;T&gt;
+1906     Collector&lt;T, ?, DoubleSummaryStatistics&gt; summarizingDouble(ToDoubleFunction&lt;? super T&gt; mapper) {
+1907         return new CollectorImpl&lt;T, DoubleSummaryStatistics, DoubleSummaryStatistics&gt;(
+1908                 DoubleSummaryStatistics::new,
+1909                 (r, t) -&gt; r.accept(mapper.applyAsDouble(t)),
+1910                 (l, r) -&gt; { l.combine(r); return l; }, CH_ID);
+1911     }
+1912 
+1913     /**
+1914      * Returns a {@code Collector} that is a composite of two downstream collectors.
+1915      * Every element passed to the resulting collector is processed by both downstream
+1916      * collectors, then their results are merged using the specified merge function
+1917      * into the final result.
+1918      *
+1919      * &lt;p&gt;The resulting collector functions do the following:
+1920      *
+1921      * &lt;ul&gt;
+1922      * &lt;li&gt;supplier: creates a result container that contains result containers
+1923      * obtained by calling each collector's supplier
+1924      * &lt;li&gt;accumulator: calls each collector's accumulator with its result container
+1925      * and the input element
+1926      * &lt;li&gt;combiner: calls each collector's combiner with two result containers
+1927      * &lt;li&gt;finisher: calls each collector's finisher with its result container,
+1928      * then calls the supplied merger and returns its result.
+1929      * &lt;/ul&gt;
+1930      *
+1931      * &lt;p&gt;The resulting collector is {@link Collector.Characteristics#UNORDERED} if both downstream
+1932      * collectors are unordered and {@link Collector.Characteristics#CONCURRENT} if both downstream
+1933      * collectors are concurrent.
+1934      *
+1935      * @param &lt;T&gt;         the type of the input elements
+1936      * @param &lt;R1&gt;        the result type of the first collector
+1937      * @param &lt;R2&gt;        the result type of the second collector
+1938      * @param &lt;R&gt;         the final result type
+1939      * @param downstream1 the first downstream collector
+1940      * @param downstream2 the second downstream collector
+1941      * @param merger      the function which merges two results into the single one
+1942      * @return a {@code Collector} which aggregates the results of two supplied collectors.
+1943      * @since 12
+1944      */
+1945     public static &lt;T, R1, R2, R&gt;
+1946     Collector&lt;T, ?, R&gt; teeing(Collector&lt;? super T, ?, R1&gt; downstream1,
+1947                               Collector&lt;? super T, ?, R2&gt; downstream2,
+1948                               BiFunction&lt;? super R1, ? super R2, R&gt; merger) {
+1949         return teeing0(downstream1, downstream2, merger);
+1950     }
+1951 
+1952     private static &lt;T, A1, A2, R1, R2, R&gt;
+1953     Collector&lt;T, ?, R&gt; teeing0(Collector&lt;? super T, A1, R1&gt; downstream1,
+1954                                Collector&lt;? super T, A2, R2&gt; downstream2,
+1955                                BiFunction&lt;? super R1, ? super R2, R&gt; merger) {
+1956         Objects.requireNonNull(downstream1, "downstream1");
+1957         Objects.requireNonNull(downstream2, "downstream2");
+1958         Objects.requireNonNull(merger, "merger");
+1959 
+<a name="18" id="anc18"></a>
+
+1960         BiConsumer&lt;A1, ? super T&gt; c1Accumulator =
+1961                 Objects.requireNonNull(downstream1.accumulator(), "downstream1 accumulator");
+1962         BiConsumer&lt;A2, ? super T&gt; c2Accumulator =
+1963                 Objects.requireNonNull(downstream2.accumulator(), "downstream2 accumulator");
+1964         BinaryOperator&lt;A1&gt; c1Combiner = Objects.requireNonNull(downstream1.combiner(), "downstream1 combiner");
+1965         BinaryOperator&lt;A2&gt; c2Combiner = Objects.requireNonNull(downstream2.combiner(), "downstream2 combiner");
+1966         Function&lt;A1, R1&gt; c1Finisher = Objects.requireNonNull(downstream1.finisher(), "downstream1 finisher");
+1967         Function&lt;A2, R2&gt; c2Finisher = Objects.requireNonNull(downstream2.finisher(), "downstream2 finisher");
+1968 
+1969         Set&lt;Collector.Characteristics&gt; characteristics;
+1970         Set&lt;Collector.Characteristics&gt; c1Characteristics = downstream1.characteristics();
+1971         Set&lt;Collector.Characteristics&gt; c2Characteristics = downstream2.characteristics();
+1972         if (CH_ID.containsAll(c1Characteristics) || CH_ID.containsAll(c2Characteristics)) {
+1973             characteristics = CH_NOID;
+1974         } else {
+1975             EnumSet&lt;Collector.Characteristics&gt; c = EnumSet.noneOf(Collector.Characteristics.class);
+1976             c.addAll(c1Characteristics);
+1977             c.retainAll(c2Characteristics);
+1978             c.remove(Collector.Characteristics.IDENTITY_FINISH);
+1979             characteristics = Collections.unmodifiableSet(c);
+1980         }
+1981 
+1982         class PairBox {
+<a name="19" id="anc19"></a><span class="changed">1983             A1 left;</span>
+<span class="changed">1984             A2 right;</span>
+<span class="changed">1985 </span>
+<span class="changed">1986             PairBox(int initialSize) {</span>
+<span class="changed">1987                 left = Objects.requireNonNull(downstream1.sizedSupplier(), "downstream1 sizedSupplier")</span>
+<span class="changed">1988                         .apply(initialSize);</span>
+<span class="changed">1989                 right = Objects.requireNonNull(downstream2.sizedSupplier(), "downstream2 sizedSupplier")</span>
+<span class="changed">1990                         .apply(initialSize);</span>
+<span class="changed">1991             }</span>
+<span class="changed">1992 </span>
+<span class="changed">1993             PairBox() {</span>
+<span class="changed">1994                 left = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier").get();</span>
+<span class="changed">1995                 right = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier").get();</span>
+<span class="changed">1996             }</span>
+1997 
+1998             void add(T t) {
+1999                 c1Accumulator.accept(left, t);
+2000                 c2Accumulator.accept(right, t);
+2001             }
+2002 
+2003             PairBox combine(PairBox other) {
+2004                 left = c1Combiner.apply(left, other.left);
+2005                 right = c2Combiner.apply(right, other.right);
+2006                 return this;
+2007             }
+2008 
+2009             R get() {
+2010                 R1 r1 = c1Finisher.apply(left);
+2011                 R2 r2 = c2Finisher.apply(right);
+2012                 return merger.apply(r1, r2);
+2013             }
+2014         }
+2015 
+<a name="20" id="anc20"></a><span class="changed">2016         return new CollectorImpl&lt;&gt;(PairBox::new,</span>
+<span class="changed">2017                                    PairBox::new,</span>
+<span class="changed">2018                                    PairBox::add,</span>
+<span class="changed">2019                                    PairBox::combine,</span>
+<span class="changed">2020                                    PairBox::get,</span>
+<span class="changed">2021                                    characteristics);</span>
+2022     }
+2023 
+2024     /**
+2025      * Implementation class used by partitioningBy.
+2026      */
+2027     private static final class Partition&lt;T&gt;
+2028             extends AbstractMap&lt;Boolean, T&gt;
+2029             implements Map&lt;Boolean, T&gt; {
+2030         final T forTrue;
+2031         final T forFalse;
+2032 
+2033         Partition(T forTrue, T forFalse) {
+2034             this.forTrue = forTrue;
+2035             this.forFalse = forFalse;
+2036         }
+2037 
+2038         @Override
+2039         public Set&lt;Map.Entry&lt;Boolean, T&gt;&gt; entrySet() {
+2040             return new AbstractSet&lt;&gt;() {
+2041                 @Override
+2042                 public Iterator&lt;Map.Entry&lt;Boolean, T&gt;&gt; iterator() {
+2043                     Map.Entry&lt;Boolean, T&gt; falseEntry = new SimpleImmutableEntry&lt;&gt;(false, forFalse);
+2044                     Map.Entry&lt;Boolean, T&gt; trueEntry = new SimpleImmutableEntry&lt;&gt;(true, forTrue);
+2045                     return List.of(falseEntry, trueEntry).iterator();
+2046                 }
+2047 
+2048                 @Override
+2049                 public int size() {
+2050                     return 2;
+2051                 }
+2052             };
+2053         }
+2054     }
+2055 }
+<a name="21" id="anc21"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="21" type="hidden" /></form></body></html>

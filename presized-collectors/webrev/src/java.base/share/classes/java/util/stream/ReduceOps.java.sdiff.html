@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff src/java.base/share/classes/java/util/stream </title>
+</head><body id="SUNWwebrev">
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReferencePipeline.java.sdiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/share/classes/java/util/stream/ReduceOps.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+ 137         }
+ 138         return new ReduceOp&lt;T, Optional&lt;T&gt;, ReducingSink&gt;(StreamShape.REFERENCE) {
+ 139             @Override
+ 140             public ReducingSink makeSink() {
+ 141                 return new ReducingSink();
+ 142             }
+ 143         };
+ 144     }
+ 145 
+ 146     /**
+ 147      * Constructs a {@code TerminalOp} that implements a mutable reduce on
+ 148      * reference values.
+ 149      *
+ 150      * @param &lt;T&gt; the type of the input elements
+ 151      * @param &lt;I&gt; the type of the intermediate reduction result
+ 152      * @param collector a {@code Collector} defining the reduction
+ 153      * @return a {@code ReduceOp} implementing the reduction
+ 154      */
+ 155     public static &lt;T, I&gt; TerminalOp&lt;T, I&gt;
+ 156     makeRef(Collector&lt;? super T, I, ?&gt; collector) {
+<span class="changed"> 157         Supplier&lt;I&gt; supplier = Objects.requireNonNull(collector).supplier();</span>
+<span class="changed"> 158         BiConsumer&lt;I, ? super T&gt; accumulator = collector.accumulator();</span>
+ 159         BinaryOperator&lt;I&gt; combiner = collector.combiner();
+ 160         class ReducingSink extends Box&lt;I&gt;
+ 161                 implements AccumulatingSink&lt;T, I, ReducingSink&gt; {
+ 162             @Override
+ 163             public void begin(long size) {
+<span class="changed"> 164                 state = supplier.get();</span>
+
+
+
+ 165             }
+ 166 
+ 167             @Override
+ 168             public void accept(T t) {
+ 169                 accumulator.accept(state, t);
+ 170             }
+ 171 
+ 172             @Override
+ 173             public void combine(ReducingSink other) {
+ 174                 state = combiner.apply(state, other.state);
+ 175             }
+ 176         }
+ 177         return new ReduceOp&lt;T, I, ReducingSink&gt;(StreamShape.REFERENCE) {
+ 178             @Override
+ 179             public ReducingSink makeSink() {
+ 180                 return new ReducingSink();
+ 181             }
+ 182 
+ 183             @Override
+ 184             public int getOpFlags() {
+
+</pre><hr></hr>
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+ 137         }
+ 138         return new ReduceOp&lt;T, Optional&lt;T&gt;, ReducingSink&gt;(StreamShape.REFERENCE) {
+ 139             @Override
+ 140             public ReducingSink makeSink() {
+ 141                 return new ReducingSink();
+ 142             }
+ 143         };
+ 144     }
+ 145 
+ 146     /**
+ 147      * Constructs a {@code TerminalOp} that implements a mutable reduce on
+ 148      * reference values.
+ 149      *
+ 150      * @param &lt;T&gt; the type of the input elements
+ 151      * @param &lt;I&gt; the type of the intermediate reduction result
+ 152      * @param collector a {@code Collector} defining the reduction
+ 153      * @return a {@code ReduceOp} implementing the reduction
+ 154      */
+ 155     public static &lt;T, I&gt; TerminalOp&lt;T, I&gt;
+ 156     makeRef(Collector&lt;? super T, I, ?&gt; collector) {
+<span class="changed"> 157         BiConsumer&lt;I, ? super T&gt; accumulator = Objects.requireNonNull(collector).accumulator();</span>
+
+ 158         BinaryOperator&lt;I&gt; combiner = collector.combiner();
+ 159         class ReducingSink extends Box&lt;I&gt;
+ 160                 implements AccumulatingSink&lt;T, I, ReducingSink&gt; {
+ 161             @Override
+ 162             public void begin(long size) {
+<span class="changed"> 163                 if (size == -1)</span>
+<span class="changed"> 164                     state = collector.supplier().get();</span>
+<span class="changed"> 165                 else</span>
+<span class="changed"> 166                     state = collector.sizedSupplier().apply((int) size);</span>
+ 167             }
+ 168 
+ 169             @Override
+ 170             public void accept(T t) {
+ 171                 accumulator.accept(state, t);
+ 172             }
+ 173 
+ 174             @Override
+ 175             public void combine(ReducingSink other) {
+ 176                 state = combiner.apply(state, other.state);
+ 177             }
+ 178         }
+ 179         return new ReduceOp&lt;T, I, ReducingSink&gt;(StreamShape.REFERENCE) {
+ 180             @Override
+ 181             public ReducingSink makeSink() {
+ 182                 return new ReducingSink();
+ 183             }
+ 184 
+ 185             @Override
+ 186             public int getOpFlags() {
+
+</pre><hr></hr>
+</pre></td>
+</tr></table>
+<center><a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/ReferencePipeline.java.sdiff.html' target='_top'>next &gt</a></center>
+</body></html>

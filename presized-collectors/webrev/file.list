@@ -1,0 +1,4 @@
+src/java.base/share/classes/java/util/stream/Collector.java
+src/java.base/share/classes/java/util/stream/Collectors.java
+src/java.base/share/classes/java/util/stream/ReduceOps.java
+src/java.base/share/classes/java/util/stream/ReferencePipeline.java

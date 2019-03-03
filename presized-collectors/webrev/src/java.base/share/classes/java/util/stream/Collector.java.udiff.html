@@ -1,0 +1,250 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Udiff src/java.base/share/classes/java/util/stream/Collector.java</title>
+
+<style type="text/css" media="screen">
+span.new {
+    color: blue;
+    font-weight: normal;
+}
+</style>
+
+</head>
+<body id="SUNWwebrev">
+<center>&lt prev <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.udiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/share/classes/java/util/stream/Collector.java</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre>
+        <pre>
+</pre><hr /><pre>
+<span class="newmarker">@@ -26,14 +26,11 @@</span>
+ 
+ import java.util.Collections;
+ import java.util.EnumSet;
+ import java.util.Objects;
+ import java.util.Set;
+<span class="removed">-import java.util.function.BiConsumer;</span>
+<span class="removed">-import java.util.function.BinaryOperator;</span>
+<span class="removed">-import java.util.function.Function;</span>
+<span class="removed">-import java.util.function.Supplier;</span>
+<span class="new">+import java.util.function.*;</span>
+ 
+ /**
+  * A &lt;a href="package-summary.html#Reduction"&gt;mutable reduction operation&lt;/a&gt; that
+  * accumulates input elements into a mutable result container, optionally transforming
+  * the accumulated result into a final representation after all input elements
+</pre><hr /><pre>
+<span class="newmarker">@@ -201,10 +198,20 @@</span>
+      * @return a function which returns a new, mutable result container
+      */
+     Supplier&lt;A&gt; supplier();
+ 
+     /**
+<span class="new">+     * A function that creates and returns a new mutable result container,</span>
+<span class="new">+     * when applied with an initial capacity.</span>
+<span class="new">+     *</span>
+<span class="new">+     * @return a function which returns a new, mutable result container</span>
+<span class="new">+     */</span>
+<span class="new">+    default IntFunction&lt;A&gt; sizedSupplier() {</span>
+<span class="new">+        return ignored -&gt; supplier().get();</span>
+<span class="new">+    }</span>
+<span class="new">+</span>
+<span class="new">+    /**</span>
+      * A function that folds a value into a mutable result container.
+      *
+      * @return a function which folds a value into a mutable result container
+      */
+     BiConsumer&lt;A, T&gt; accumulator();
+</pre><hr /><pre>
+<span class="newmarker">@@ -259,25 +266,75 @@</span>
+      */
+     public static&lt;T, R&gt; Collector&lt;T, R, R&gt; of(Supplier&lt;R&gt; supplier,
+                                               BiConsumer&lt;R, T&gt; accumulator,
+                                               BinaryOperator&lt;R&gt; combiner,
+                                               Characteristics... characteristics) {
+<span class="new">+        return of(ignored -&gt; supplier.get(), supplier, accumulator, combiner, characteristics);</span>
+<span class="new">+    }</span>
+<span class="new">+</span>
+<span class="new">+    /**</span>
+<span class="new">+     * Returns a new {@code Collector} described by the given {@code supplier},</span>
+<span class="new">+     * {@code accumulator}, {@code combiner}, and {@code finisher} functions.</span>
+<span class="new">+     *</span>
+<span class="new">+     * @param supplier The supplier function for the new collector</span>
+<span class="new">+     * @param accumulator The accumulator function for the new collector</span>
+<span class="new">+     * @param combiner The combiner function for the new collector</span>
+<span class="new">+     * @param finisher The finisher function for the new collector</span>
+<span class="new">+     * @param characteristics The collector characteristics for the new</span>
+<span class="new">+     *                        collector</span>
+<span class="new">+     * @param &lt;T&gt; The type of input elements for the new collector</span>
+<span class="new">+     * @param &lt;A&gt; The intermediate accumulation type of the new collector</span>
+<span class="new">+     * @param &lt;R&gt; The final result type of the new collector</span>
+<span class="new">+     * @throws NullPointerException if any argument is null</span>
+<span class="new">+     * @return the new {@code Collector}</span>
+<span class="new">+     */</span>
+<span class="new">+    public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(Supplier&lt;A&gt; supplier,</span>
+<span class="new">+                                                 BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new">+                                                 BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new">+                                                 Function&lt;A, R&gt; finisher,</span>
+<span class="new">+                                                 Characteristics... characteristics) {</span>
+<span class="new">+        return of(ignored -&gt; supplier.get(), supplier, accumulator, combiner, finisher, characteristics);</span>
+<span class="new">+    }</span>
+<span class="new">+</span>
+<span class="new">+    /**</span>
+<span class="new">+     * Returns a new {@code Collector} described by the given {@code supplier},</span>
+<span class="new">+     * {@code accumulator}, {@code combiner}, and {@code finisher} functions.</span>
+<span class="new">+     *</span>
+<span class="new">+     * @param sizedSupplier The sized supplier function for the new collector</span>
+<span class="new">+     * @param supplier The supplier function for the new collector</span>
+<span class="new">+     * @param accumulator The accumulator function for the new collector</span>
+<span class="new">+     * @param combiner The combiner function for the new collector</span>
+<span class="new">+     * @param characteristics The collector characteristics for the new</span>
+<span class="new">+     *                        collector</span>
+<span class="new">+     * @param &lt;T&gt; The type of input elements for the new collector</span>
+<span class="new">+     * @param &lt;A&gt; The intermediate accumulation type of the new collector</span>
+<span class="new">+     * @param &lt;R&gt; The final result type of the new collector</span>
+<span class="new">+     * @throws NullPointerException if any argument is null</span>
+<span class="new">+     * @return the new {@code Collector}</span>
+<span class="new">+     */</span>
+<span class="new">+    public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="new">+                                                 Supplier&lt;A&gt; supplier,</span>
+<span class="new">+                                                 BiConsumer&lt;A, T&gt; accumulator,</span>
+<span class="new">+                                                 BinaryOperator&lt;A&gt; combiner,</span>
+<span class="new">+                                                 Characteristics... characteristics) {</span>
+<span class="new">+        Objects.requireNonNull(sizedSupplier);</span>
+         Objects.requireNonNull(supplier);
+         Objects.requireNonNull(accumulator);
+         Objects.requireNonNull(combiner);
+         Objects.requireNonNull(characteristics);
+         Set&lt;Characteristics&gt; cs = (characteristics.length == 0)
+                                   ? Collectors.CH_ID
+                                   : Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH,
+                                                                            characteristics));
+<span class="removed">-        return new Collectors.CollectorImpl&lt;&gt;(supplier, accumulator, combiner, cs);</span>
+<span class="new">+        return new Collectors.CollectorImpl&lt;&gt;(sizedSupplier, supplier, accumulator, combiner, cs);</span>
+     }
+ 
+     /**
+      * Returns a new {@code Collector} described by the given {@code supplier},
+      * {@code accumulator}, {@code combiner}, and {@code finisher} functions.
+      *
+<span class="new">+     * @param sizedSupplier The sized supplier function for the new collector</span>
+      * @param supplier The supplier function for the new collector
+      * @param accumulator The accumulator function for the new collector
+      * @param combiner The combiner function for the new collector
+      * @param finisher The finisher function for the new collector
+      * @param characteristics The collector characteristics for the new
+</pre><hr /><pre>
+<span class="newmarker">@@ -286,15 +343,17 @@</span>
+      * @param &lt;A&gt; The intermediate accumulation type of the new collector
+      * @param &lt;R&gt; The final result type of the new collector
+      * @throws NullPointerException if any argument is null
+      * @return the new {@code Collector}
+      */
+<span class="removed">-    public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(Supplier&lt;A&gt; supplier,</span>
+<span class="new">+    public static&lt;T, A, R&gt; Collector&lt;T, A, R&gt; of(IntFunction&lt;A&gt; sizedSupplier,</span>
+<span class="new">+                                                 Supplier&lt;A&gt; supplier,</span>
+                                                  BiConsumer&lt;A, T&gt; accumulator,
+                                                  BinaryOperator&lt;A&gt; combiner,
+                                                  Function&lt;A, R&gt; finisher,
+                                                  Characteristics... characteristics) {
+<span class="new">+        Objects.requireNonNull(sizedSupplier);</span>
+         Objects.requireNonNull(supplier);
+         Objects.requireNonNull(accumulator);
+         Objects.requireNonNull(combiner);
+         Objects.requireNonNull(finisher);
+         Objects.requireNonNull(characteristics);
+</pre><hr /><pre>
+<span class="newmarker">@@ -302,11 +361,11 @@</span>
+         if (characteristics.length &gt; 0) {
+             cs = EnumSet.noneOf(Characteristics.class);
+             Collections.addAll(cs, characteristics);
+             cs = Collections.unmodifiableSet(cs);
+         }
+<span class="removed">-        return new Collectors.CollectorImpl&lt;&gt;(supplier, accumulator, combiner, finisher, cs);</span>
+<span class="new">+        return new Collectors.CollectorImpl&lt;&gt;(sizedSupplier, supplier, accumulator, combiner, finisher, cs);</span>
+     }
+ 
+     /**
+      * Characteristics indicating properties of a {@code Collector}, which can
+      * be used to optimize reduction implementations.
+</pre>
+<center>&lt prev <a href='../../../../../../../index.html' target='_top'>index</a> <a href='../../../../../../../src/java.base/share/classes/java/util/stream/Collectors.java.udiff.html' target='_top'>next &gt</a></center>
+</body></html>
+
