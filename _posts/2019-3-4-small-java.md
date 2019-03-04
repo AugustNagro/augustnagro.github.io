@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "*Really* Small Java Apps"
-date: 2019-1-4
+date: 2019-3-4
 ---
 Since bundling apps and runtime is the new best-practice (whether with Docker or [jpackage](http://jdk.java.net/jpackage/)), and the full JVM weighs in at hundreds of megabytes, how can we include only the minimal JVM subset our application requires? This post explores 4 complementary ways:
 
