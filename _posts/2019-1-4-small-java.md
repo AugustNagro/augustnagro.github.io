@@ -79,7 +79,7 @@ make images CONF=macosx-x86_64-custom-release
 
 You can now use `java`, `jlink`, etc from the [build output](https://hg.openjdk.java.net/jdk/jdk/raw-file/2bd3e05d4c6f/doc/building.html#build-output-structure).
 
-## jlink
+### jlink
 If your app uses the Java Module System, it's easy to make a minimal JRE image, with just the modules you require:
 
 {% highlight bash %}
@@ -91,12 +91,12 @@ jlink --compress=1 --no-header-files            \
 
 Make sure to not use compress=2, since your applicationn will be slower, AND larger (at least [for now](https://twitter.com/cl4es/status/1100399121079455744)).
 
-## Docker
+### Docker
 Google's [Distroless project](https://github.com/GoogleContainerTools/distroless) has minimal docker images. If using a jlink image then the [base](https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md) image should be prefered.
 
-## Jpackage
+### Jpackage
 
 There are early-access builds of jpackage [available](http://jdk.java.net/jpackage/). Jlinked images can be specified with an option.
 
-## Conclusions:
+### Conclusions
 For a simple project requiring java.net.http, using these steps produced a 23MB jlink image. Hopefully this can be improved further if jlink improves --compress=2 to use LZ4 (https://twitter.com/shipilev/status/1100396679285665794)
