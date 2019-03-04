@@ -700,11 +700,11 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  618 
  619         @Override
  620         public &lt;P_IN&gt; A evaluateParallel(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {
- 621             long size;
- 622             if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
- 623                 res = sizedSupplier.apply((int) size);
+ 621             long size = helper.exactOutputSizeIfKnown(spliterator);
+ 622             if (size &lt; 0 || size &gt; Integer.MAX_VALUE)
+ 623                 res = supplier.get();
  624             else
- 625                 res = supplier.get();
+ 625                 res = sizedSupplier.apply((int) size);
  626             new ForEachOps.ForEachTask&lt;&gt;(helper, spliterator, helper.wrapSink(this)).invoke();
  627             return res;
  628         }

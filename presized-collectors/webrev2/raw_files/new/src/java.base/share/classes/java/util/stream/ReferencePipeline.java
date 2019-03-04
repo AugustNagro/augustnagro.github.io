@@ -618,11 +618,11 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
         @Override
         public <P_IN> A evaluateParallel(PipelineHelper<T> helper, Spliterator<P_IN> spliterator) {
-            long size;
-            if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
-                res = sizedSupplier.apply((int) size);
-            else
+            long size = helper.exactOutputSizeIfKnown(spliterator);
+            if (size < 0 || size > Integer.MAX_VALUE)
                 res = supplier.get();
+            else
+                res = sizedSupplier.apply((int) size);
             new ForEachOps.ForEachTask<>(helper, spliterator, helper.wrapSink(this)).invoke();
             return res;
         }

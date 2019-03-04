@@ -163,11 +163,11 @@ rev <a href="https://bugs.openjdk.java.net/browse/JDK-53969">53969</a> : added m
 <span class="new">+ </span>
 <span class="new">+         @Override</span>
 <span class="new">+         public &lt;P_IN&gt; A evaluateParallel(PipelineHelper&lt;T&gt; helper, Spliterator&lt;P_IN&gt; spliterator) {</span>
-<span class="new">+             long size;</span>
-<span class="new">+             if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)</span>
-<span class="new">+                 res = sizedSupplier.apply((int) size);</span>
-<span class="new">+             else</span>
+<span class="new">+             long size = helper.exactOutputSizeIfKnown(spliterator);</span>
+<span class="new">+             if (size &lt; 0 || size &gt; Integer.MAX_VALUE)</span>
 <span class="new">+                 res = supplier.get();</span>
+<span class="new">+             else</span>
+<span class="new">+                 res = sizedSupplier.apply((int) size);</span>
 <span class="new">+             new ForEachOps.ForEachTask&lt;&gt;(helper, spliterator, helper.wrapSink(this)).invoke();</span>
 <span class="new">+             return res;</span>
 <span class="new">+         }</span>

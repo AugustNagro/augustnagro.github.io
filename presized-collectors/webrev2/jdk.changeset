@@ -456,10 +456,10 @@ diff --git a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
                                 BiConsumer<R, ? super P_OUT> accumulator,
 # HG changeset patch
 # User august
-# Date 1551679365 21600
-#      Mon Mar 04 00:02:45 2019 -0600
+# Date 1551726783 21600
+#      Mon Mar 04 13:13:03 2019 -0600
 # Branch presized-collectors
-# Node ID 9c9132bbd1a80becdd331cf5cf6297e02c16c731
+# Node ID 36bf4095942bf04a1e6388c210a1e3f72b1a841e
 # Parent  898cbb56ce6089bfbf5e30c3fc38b7eb066cd607
 added map loadfactor and collector nullchecks
 
@@ -631,15 +631,19 @@ diff --git a/src/java.base/share/classes/java/util/stream/ReferencePipeline.java
              this.accumulator = collector.accumulator();
          }
  
-@@ -618,9 +620,9 @@
+@@ -616,11 +618,11 @@
+ 
+         @Override
          public <P_IN> A evaluateParallel(PipelineHelper<T> helper, Spliterator<P_IN> spliterator) {
-             long size;
-             if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
+-            long size;
+-            if ((size = helper.exactOutputSizeIfKnown(spliterator)) != -1)
 -                res = collector.sizedSupplier().apply((int) size);
-+                res = sizedSupplier.apply((int) size);
++            long size = helper.exactOutputSizeIfKnown(spliterator);
++            if (size < 0 || size > Integer.MAX_VALUE)
++                res = supplier.get();
              else
 -                res = collector.supplier().get();
-+                res = supplier.get();
++                res = sizedSupplier.apply((int) size);
              new ForEachOps.ForEachTask<>(helper, spliterator, helper.wrapSink(this)).invoke();
              return res;
          }
