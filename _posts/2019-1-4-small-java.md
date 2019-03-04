@@ -74,7 +74,7 @@ Build performance summary:
 
 Then make:
 {% highlight bash %}
-make images CONF=macosx-x86_64-custom-release
+make images CONF=macosx-x86_64-minimal-release
 {% endhighlight %}
 
 You can now use `java`, `jlink`, etc from the [build output](https://hg.openjdk.java.net/jdk/jdk/raw-file/2bd3e05d4c6f/doc/building.html#build-output-structure).
@@ -89,10 +89,10 @@ jlink --compress=1 --no-header-files            \
     --add-modules <module>[,<module>...]
 {% endhighlight %}
 
-Make sure to not use compress=2, since your applicationn will be slower, AND larger (at least [for now](https://twitter.com/cl4es/status/1100399121079455744)).
+Make sure not to use compress=2, since your applicationn will be slower, AND larger (at least [for now](https://twitter.com/cl4es/status/1100399121079455744)).
 
 ### Docker
-Google's [Distroless project](https://github.com/GoogleContainerTools/distroless) has minimal docker images. If using a jlink image then the [base](https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md) image should be prefered.
+Google's [Distroless project](https://github.com/GoogleContainerTools/distroless) has minimal docker images. If using a jlink image then the [base](https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md) image (8mb) should be prefered.
 
 ### Jpackage
 
