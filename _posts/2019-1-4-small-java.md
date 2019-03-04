@@ -89,14 +89,14 @@ jlink --compress=1 --no-header-files            \
     --add-modules <module>[,<module>...]
 {% endhighlight %}
 
-Make sure to not use compress=2, since your applicationn will be slower, AND larger (at least [not yet](https://twitter.com/cl4es/status/1100399121079455744)).
+Make sure to not use compress=2, since your applicationn will be slower, AND larger (at least [for now](https://twitter.com/cl4es/status/1100399121079455744)).
 
 ## Docker
-Google's [Jib Project](https://github.com/GoogleContainerTools/jib) has minimal docker images. If using a jlink image then the [base](https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md) image should be prefered.
+Google's [Distroless project](https://github.com/GoogleContainerTools/distroless) has minimal docker images. If using a jlink image then the [base](https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md) image should be prefered.
 
 ## Jpackage
 
 There are early-access builds of jpackage [available](http://jdk.java.net/jpackage/). Jlinked images can be specified with an option.
 
 ## Conclusions:
-For a simple project requiring java.net.http, using these steps produced a 23MB app image. Hopefully this can be improved further if jlink improves --compress=2 to use LZ4 (https://twitter.com/shipilev/status/1100396679285665794)
+For a simple project requiring java.net.http, using these steps produced a 23MB jlink image. Hopefully this can be improved further if jlink improves --compress=2 to use LZ4 (https://twitter.com/shipilev/status/1100396679285665794)
