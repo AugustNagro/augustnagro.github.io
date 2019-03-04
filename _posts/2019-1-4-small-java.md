@@ -1,16 +1,16 @@
 ---
 layout: post
 title: "*Really* Small Java Apps"
-date: 2010-1-4
+date: 2019-1-4
 ---
-Since bundling apps and runtime is the new best-practice (whether with Kubernetes or [jpackage](http://jdk.java.net/jpackage/)) and the full JVM weighs in at hundreds of megabytes, how can we include only the minimal JVM subset our application requires? This post explores 4 complementary ways:
+Since bundling apps and runtime is the new best-practice (whether with Docker or [jpackage](http://jdk.java.net/jpackage/)), and the full JVM weighs in at hundreds of megabytes, how can we include only the minimal JVM subset our application requires? This post explores 4 complementary ways:
 
-1. [Build a minimal JDK image](##building-the-jdk)
-2. [Use jlink to create an application image](##jlink)
-3. [Choose a minimal docker image](##docker)
-4. [Use the jlink image with jpackage](##jpackage)
+1. [Build a minimal JDK image](#building-the-jdk)
+2. [Use jlink to create an application image](#jlink)
+3. [Choose a minimal docker image](#docker)
+4. [Use the jlink image with jpackage](#jpackage)
 
-## Building the JDK
+### Building the JDK
 OpenJDK has many features, including 7 Garbage Collectors (Epsilon, Serial, Parallel, CMS, G1, Shennandoah, ZGC!!) and experimental compilers like Graal. [Building the OpenJDK](https://hg.openjdk.java.net/jdk/jdk/raw-file/2bd3e05d4c6f/doc/building.html) is suprisingly easy (took 12 minutes for a fresh build on my 2015 macbook), so lets strip out what we don't need!
 
 We care about two [`configure`](https://hg.openjdk.java.net/jdk/jdk/raw-file/2bd3e05d4c6f/doc/building.html#common-configure-arguments) options: `--with-jvm-variants=<variant>[,<variant>...]` and `--with-jvm-features=<feature>[,<feature>...]`. By default `configure` uses the `server` variant, which includes features:
@@ -47,7 +47,7 @@ bash configure --with-jvm-variants=minimal \
 
 Configure should spit out something like
 
-```
+{% highlight bash %}
 ====================================================
 The existing configuration has been successfully updated in
 /Users/august/Documents/prog/openjdk/jdk/build/macosx-x86_64-minimal-release
@@ -70,7 +70,7 @@ Tools summary:
 Build performance summary:
 * Cores to use:   4
 * Memory limit:   8192 MB
-```
+{% endhighlight %}
 
 Then make:
 {% highlight bash %}
