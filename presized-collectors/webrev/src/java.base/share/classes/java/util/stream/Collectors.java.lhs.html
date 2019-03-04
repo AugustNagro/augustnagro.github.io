@@ -81,7 +81,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
     </head>
     <body id="SUNWwebrev" onkeypress="keypress(event);">
     <a name="0"></a>
-    <pre>rev <a href="https://bugs.openjdk.java.net/browse/JDK-53968">53968</a> : enable Collector pre-sizing</pre><hr></hr>
+    <pre></pre><hr></hr>
 <pre>
    1 /*
    2  * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
@@ -429,9 +429,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  316      */
  317     public static &lt;T&gt;
  318     Collector&lt;T, ?, Set&lt;T&gt;&gt; toSet() {
-<a name="9" id="anc9"></a><span class="changed"> 319         return new CollectorImpl&lt;&gt;((Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new, Set::add,</span>
-
-
+ 319         return new CollectorImpl&lt;&gt;((Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new, Set::add,
  320                                    (left, right) -&gt; {
  321                                        if (left.size() &lt; right.size()) {
  322                                            right.addAll(left); return right;
@@ -460,9 +458,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  345     @SuppressWarnings("unchecked")
  346     public static &lt;T&gt;
  347     Collector&lt;T, ?, Set&lt;T&gt;&gt; toUnmodifiableSet() {
-<a name="10" id="anc10"></a><span class="changed"> 348         return new CollectorImpl&lt;&gt;((Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new, Set::add,</span>
-
-
+ 348         return new CollectorImpl&lt;&gt;((Supplier&lt;Set&lt;T&gt;&gt;) HashSet::new, Set::add,
  349                                    (left, right) -&gt; {
  350                                        if (left.size() &lt; right.size()) {
  351                                            right.addAll(left); return right;
@@ -483,7 +479,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  366      */
  367     public static Collector&lt;CharSequence, ?, String&gt; joining() {
  368         return new CollectorImpl&lt;CharSequence, StringBuilder, String&gt;(
-<a name="11" id="anc11"></a><span class="changed"> 369                 StringBuilder::new, StringBuilder::append,</span>
+<a name="9" id="anc9"></a><span class="changed"> 369                 StringBuilder::new, StringBuilder::append,</span>
  370                 (r1, r2) -&gt; { r1.append(r2); return r1; },
  371                 StringBuilder::toString, CH_NOID);
  372     }
@@ -574,7 +570,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  457     Collector&lt;T, ?, R&gt; mapping(Function&lt;? super T, ? extends U&gt; mapper,
  458                                Collector&lt;? super U, A, R&gt; downstream) {
  459         BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
-<a name="12" id="anc12"></a><span class="changed"> 460         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+<a name="10" id="anc10"></a><span class="changed"> 460         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
  461                                    (r, t) -&gt; downstreamAccumulator.accept(r, mapper.apply(t)),
  462                                    downstream.combiner(), downstream.finisher(),
  463                                    downstream.characteristics());
@@ -619,7 +615,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  502     Collector&lt;T, ?, R&gt; flatMapping(Function&lt;? super T, ? extends Stream&lt;? extends U&gt;&gt; mapper,
  503                                    Collector&lt;? super U, A, R&gt; downstream) {
  504         BiConsumer&lt;A, ? super U&gt; downstreamAccumulator = downstream.accumulator();
-<a name="13" id="anc13"></a><span class="changed"> 505         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+<a name="11" id="anc11"></a><span class="changed"> 505         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
  506                             (r, t) -&gt; {
  507                                 try (Stream&lt;? extends U&gt; result = mapper.apply(t)) {
  508                                     if (result != null)
@@ -669,7 +665,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  552     Collector&lt;T, ?, R&gt; filtering(Predicate&lt;? super T&gt; predicate,
  553                                  Collector&lt;? super T, A, R&gt; downstream) {
  554         BiConsumer&lt;A, ? super T&gt; downstreamAccumulator = downstream.accumulator();
-<a name="14" id="anc14"></a><span class="changed"> 555         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+<a name="12" id="anc12"></a><span class="changed"> 555         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
  556                                    (r, t) -&gt; {
  557                                        if (predicate.test(t)) {
  558                                            downstreamAccumulator.accept(r, t);
@@ -710,7 +706,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  593                 characteristics = Collections.unmodifiableSet(characteristics);
  594             }
  595         }
-<a name="15" id="anc15"></a><span class="changed"> 596         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
+<a name="13" id="anc13"></a><span class="changed"> 596         return new CollectorImpl&lt;&gt;(downstream.supplier(),</span>
 
  597                                    downstream.accumulator(),
  598                                    downstream.combiner(),
@@ -1575,7 +1571,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 1457     Collector&lt;T, ?, Map&lt;K,U&gt;&gt; toMap(Function&lt;? super T, ? extends K&gt; keyMapper,
 1458                                     Function&lt;? super T, ? extends U&gt; valueMapper) {
 1459         return new CollectorImpl&lt;&gt;(HashMap::new,
-<a name="16" id="anc16"></a>
+<a name="14" id="anc14"></a>
 1460                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
 1461                                    uniqKeysMapMerger(),
 1462                                    CH_ID);
@@ -1835,7 +1831,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 1716     Collector&lt;T, ?, ConcurrentMap&lt;K,U&gt;&gt; toConcurrentMap(Function&lt;? super T, ? extends K&gt; keyMapper,
 1717                                                         Function&lt;? super T, ? extends U&gt; valueMapper) {
 1718         return new CollectorImpl&lt;&gt;(ConcurrentHashMap::new,
-<a name="17" id="anc17"></a>
+<a name="15" id="anc15"></a>
 1719                                    uniqKeysMapAccumulator(keyMapper, valueMapper),
 1720                                    uniqKeysMapMerger(),
 1721                                    CH_CONCURRENT_ID);
@@ -2051,7 +2047,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 1931         Objects.requireNonNull(downstream2, "downstream2");
 1932         Objects.requireNonNull(merger, "merger");
 1933 
-<a name="18" id="anc18"></a><span class="removed">1934         Supplier&lt;A1&gt; c1Supplier = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier");</span>
+<a name="16" id="anc16"></a><span class="removed">1934         Supplier&lt;A1&gt; c1Supplier = Objects.requireNonNull(downstream1.supplier(), "downstream1 supplier");</span>
 <span class="removed">1935         Supplier&lt;A2&gt; c2Supplier = Objects.requireNonNull(downstream2.supplier(), "downstream2 supplier");</span>
 1936         BiConsumer&lt;A1, ? super T&gt; c1Accumulator =
 1937                 Objects.requireNonNull(downstream1.accumulator(), "downstream1 accumulator");
@@ -2076,7 +2072,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 1956         }
 1957 
 1958         class PairBox {
-<a name="19" id="anc19"></a><span class="changed">1959             A1 left = c1Supplier.get();</span>
+<a name="17" id="anc17"></a><span class="changed">1959             A1 left = c1Supplier.get();</span>
 <span class="changed">1960             A2 right = c2Supplier.get();</span>
 
 
@@ -2109,7 +2105,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 1977             }
 1978         }
 1979 
-<a name="20" id="anc20"></a><span class="changed">1980         return new CollectorImpl&lt;&gt;(PairBox::new, PairBox::add, PairBox::combine, PairBox::get, characteristics);</span>
+<a name="18" id="anc18"></a><span class="changed">1980         return new CollectorImpl&lt;&gt;(PairBox::new, PairBox::add, PairBox::combine, PairBox::get, characteristics);</span>
 
 
 
@@ -2149,7 +2145,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 2012         }
 2013     }
 2014 }
-<a name="21" id="anc21"></a><b style="font-size: large; color: red">--- EOF ---</b>
+<a name="19" id="anc19"></a><b style="font-size: large; color: red">--- EOF ---</b>
 
 
 
@@ -2229,4 +2225,4 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 
 
 
-</pre><form name="eof"><input name="value" value="21" type="hidden" /></form></body></html>
+</pre><form name="eof"><input name="value" value="19" type="hidden" /></form></body></html>

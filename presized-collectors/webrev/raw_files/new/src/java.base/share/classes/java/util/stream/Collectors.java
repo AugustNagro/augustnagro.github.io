@@ -335,9 +335,7 @@ public final class Collectors {
      */
     public static <T>
     Collector<T, ?, Set<T>> toSet() {
-        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
-                                   (Supplier<Set<T>>) HashSet::new,
-                                   Set::add,
+        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
                                    (left, right) -> {
                                        if (left.size() < right.size()) {
                                            right.addAll(left); return right;
@@ -366,9 +364,7 @@ public final class Collectors {
     @SuppressWarnings("unchecked")
     public static <T>
     Collector<T, ?, Set<T>> toUnmodifiableSet() {
-        return new CollectorImpl<>((IntFunction<Set<T>>) HashSet::new,
-                                   (Supplier<Set<T>>) HashSet::new,
-                                   Set::add,
+        return new CollectorImpl<>((Supplier<Set<T>>) HashSet::new, Set::add,
                                    (left, right) -> {
                                        if (left.size() < right.size()) {
                                            right.addAll(left); return right;
