@@ -3,9 +3,9 @@ layout: post
 title: Surprising Speedup after Building OpenJDK from Source
 date: 2019-11-2
 ---
-Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles your class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA, to enable portability (and probably reducing the number of build combinations).
+Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA for portability (and reduce the number of build combinations).
 
-The native code running alongide your Java app is significant (C1, garbage collectors, etc). The question is, if we compile OpenJDK for our given architecture, will app throughput improve in a significant way? The answer seems to be yes.
+The native code running alongide your Java app, like C1 and the garbage collector, is significant. The question is, if we compile OpenJDK for our given architecture, will app throughput improve in a significant way? The answer seems to be yes.
 
 ### Building the JDK
 We'll be comparing [AdoptOpenJDK](https://adoptopenjdk.net/)'s Mac OpenJDK 13, and a custom-built OpenJDK 13. Both are the same build, 33. These are my build instructions:
@@ -13,23 +13,23 @@ We'll be comparing [AdoptOpenJDK](https://adoptopenjdk.net/)'s Mac OpenJDK 13, a
 1. Clone the OpenJDK [git mirror](https://github.com/openjdk/jdk)
 2. Check out release [33](https://github.com/openjdk/jdk/releases/tag/jdk-13%2B33)
 3. Run `bash configure` according to [the doc](https://hg.openjdk.java.net/jdk/jdk/raw-file/f547a06da806/doc/building.html):
-
-{% highlight bash %}
-bash configure --with-jvm-variants=server --with-jvm-features=link-time-opt \
-	--with-extra-cflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer'
-	--with-extra-cxxflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer'
-{% endhighlight %}
-
-We configure with the standard `server` varient, which includes jvm-features like `g1gc`, `c2`, etc. Additionally, `link-time-opt` is added to the build. I could not find any documentation on this feature, but presumably it performs link time optimization during the build, which should improve performance. Now lets consider the C (`--with-extra-cflags`) and C++ (`--with-extra-cxxflags`) compile flags.
-
-`-Ofast` is the highest optimization profile available in clang and gcc, and comes with a few drawbacks. Binary size may be larger, and floating-point semantics are relaxed. One may replace this profile with `-O3`, which keeps strict fp conformance, or `-O2`, which is guaranteed to maintain binary size. I have tested with both Ofast and O3, and have not experienced problems with either. But your mileage may vary.
-
-`-march=native` and `-mtune=broadwell` tell the compiler to optimize for your architecture. One would think given the compiler documentation that `march` implies `mtune`, but this is [apparently not the case](https://lemire.me/blog/2018/07/25/it-is-more-complicated-than-i-thought-mtune-march-in-gcc/).
-
-`-funroll-loops` ensures that loops are unrolled. Loop unrolling should be especially performant, since `march` is specified. Loop unrolling is included with clang's `-O3` and up, but must be manually set for gcc.
-
-`-fomit-frame-pointer` allows the compiler to omit frame pointers for certain (small) methods, freeing a register. This could make debugging the JVM's native code painful.
-
+    
+    {% highlight bash %}
+    bash configure --with-jvm-variants=server --with-jvm-features=link-time-opt \
+	    --with-extra-cflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer' \
+	    --with-extra-cxxflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer'
+    {% endhighlight %}
+    
+    We configure with the standard `server` varient, which includes jvm-features like `g1gc` and `c2`. Additionally, `link-time-opt` is added to the build. I could not find any documentation on this feature, but presumably it performs link time optimization, which should improve performance. Now lets consider the C and C++ compile flags.
+    
+    `-Ofast` is the highest optimization profile available in clang and gcc, and comes with a few drawbacks. Binary size may be larger, and floating-point semantics are relaxed. One may replace this profile with `-O3`, which keeps strict fp conformance, or `-O2`, which also maintains binary size. I have tested with both Ofast and O3, and haven't experienced problems with either. But your mileage may vary.
+    
+    `-march=native` and `-mtune=broadwell` tell the compiler to optimize for your architecture. One would think given the compiler documentation that `march` implies `mtune`, but this is [apparently not the case](https://lemire.me/blog/2018/07/25/it-is-more-complicated-than-i-thought-mtune-march-in-gcc/).
+    
+    `-funroll-loops` ensures that loops are unrolled. Loop unrolling should be especially performant, since `march` is specified. Loop unrolling is included with clang's `-O3` and up, but must be manually set for gcc.
+    
+    `-fomit-frame-pointer` allows the compiler to omit using frame pointers when possible, freeing a register. This could make debugging the JVM's native code painful.
+    
 4. Make the jdk with `make images CONF=macosx-x86_64-server-release`. The build takes only 15 minutes or so on my early 2015 macbook, even with the optimizations enabled.
 5. Find the build in `build/macosx-x86_64-server-release/images/jdk-bundled`, append to PATH and run some tests!
 
