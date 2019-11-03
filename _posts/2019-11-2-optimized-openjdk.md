@@ -3,9 +3,9 @@ layout: post
 title: Build OpenJDK for a Big Speedup
 date: 2019-11-2
 ---
-Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles your class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA. This enables portability while reduce the number of build combinations for vendors.
+Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles your class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA. This enables portability while reducing the number of build combinations for vendors.
 
-The native code running alongide your Java app, like C1 and the garbage collector, is significant. The question is, if we compile OpenJDK for our given architecture, will app throughput improve in a significant way? The answer appears to be yes.
+The native code running alongide your Java app, like C1 and the garbage collector, is significant. The question is, if we compile OpenJDK for our own architecture, will app throughput improve in a significant way? The answer appears to be yes.
 
 ### Building the JDK
 We'll be comparing [AdoptOpenJDK](https://adoptopenjdk.net/)'s Mac OpenJDK 13, and a custom-built OpenJDK 13. Both are the same build, 33. These are my build instructions:
@@ -28,7 +28,7 @@ We configure with the standard `server` varient, which includes jvm-features lik
 
 `-funroll-loops` ensures that loops are unrolled. Loop unrolling should be especially performant, since `march` is specified. Loop unrolling is included with clang's `-O3` and up, but must be manually set for gcc.
 
-`-fomit-frame-pointer` allows the compiler to omit using frame pointers when possible, freeing a register. This could make debugging the JVM's native code painful.
+`-fomit-frame-pointer` allows the compiler to omit frame pointers when possible, freeing a register. This could make debugging the JVM's native code painful.
     
 * Make the jdk with:
 
@@ -60,6 +60,9 @@ Finally I executed some JMH microbenchmarks for [Netty](https://netty.io/wiki/mi
 I chose this microbenchmark somewhat at random after looking at Netty's [extensive collection](https://github.com/netty/netty/tree/4.1/microbench/src/main/java/io/netty/microbench). The speedup is massive in the case when allocation is not pooled, and void Promises are not returned, and still big otherwise. Of course, these methods are unlikely to dominate your application's performance.
 
 Note: Netty offers [Native Transport](https://netty.io/wiki/native-transports.html)... so if we could compile *this* as well!
+
+### Other Compilers and OS
+I also tried building with [Intel's Compiler](https://software.intel.com/en-us/c-compilers), and patched the configure scripts to allow it. However, the build failed. I'd also be interested to see Linux results.
 
 ### Summary
 
