@@ -3,9 +3,9 @@ layout: post
 title: Build OpenJDK for a Big Speedup
 date: 2019-11-2
 ---
-Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA for portability (and reduce the number of build combinations).
+Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles your class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA. This enables portability while reduce the number of build combinations for vendors.
 
-The native code running alongide your Java app, like C1 and the garbage collector, is significant. The question is, if we compile OpenJDK for our given architecture, will app throughput improve in a significant way? The answer seems to be yes.
+The native code running alongide your Java app, like C1 and the garbage collector, is significant. The question is, if we compile OpenJDK for our given architecture, will app throughput improve in a significant way? The answer appears to be yes.
 
 ### Building the JDK
 We'll be comparing [AdoptOpenJDK](https://adoptopenjdk.net/)'s Mac OpenJDK 13, and a custom-built OpenJDK 13. Both are the same build, 33. These are my build instructions:
@@ -16,8 +16,8 @@ We'll be comparing [AdoptOpenJDK](https://adoptopenjdk.net/)'s Mac OpenJDK 13, a
 
 {% highlight bash %}
 bash configure --with-jvm-variants=server --with-jvm-features=link-time-opt \
-	--with-extra-cflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer' \
-	--with-extra-cxxflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer'
+--with-extra-cflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer' \
+--with-extra-cxxflags='-Ofast -march=native -mtune=broadwell -funroll-loops -fomit-frame-pointer'
 {% endhighlight %}
 
 We configure with the standard `server` varient, which includes jvm-features like `g1gc` and `c2`. Additionally, `link-time-opt` is added to the build. I could not find any documentation on this feature, but presumably it performs link time optimization, which should improve performance. Now lets consider the C and C++ compile flags.
@@ -30,8 +30,15 @@ We configure with the standard `server` varient, which includes jvm-features lik
 
 `-fomit-frame-pointer` allows the compiler to omit using frame pointers when possible, freeing a register. This could make debugging the JVM's native code painful.
     
-* Make the jdk with `make images CONF=macosx-x86_64-server-release`. The build takes only 15 minutes or so on my early 2015 macbook, even with the optimizations enabled.
-* Find the build in `build/macosx-x86_64-server-release/images/jdk-bundled`, append to PATH and run some tests!
+* Make the jdk with:
+
+{% highlight bash %}
+make images CONF=macosx-x86_64-server-release
+{% endhighlight %}
+
+The build takes only 15 minutes or so on my early 2015 macbook, even with optimizations enabled.
+
+* Find the jdk in `build/macosx-x86_64-server-release/images/jdk-bundled`, append to PATH and run some tests!
 
 ### Benchmarks
 [DaCapo](http://dacapobench.sourceforge.net/) was the first benchmark suite I ran.
@@ -50,13 +57,13 @@ Finally I executed some JMH microbenchmarks for [Netty](https://netty.io/wiki/mi
 
 <p align="center"><img src="/images/bench/netty.png" class="img-responsive" alt="Netty JMH Results"></p>
 
-I chose this microbenchmark somewhat at random after looking at Netty's [extensive collection](https://github.com/netty/netty/tree/4.1/microbench/src/main/java/io/netty/microbench). The speedup is massive in the case when allocation is not pooled, and void Promises are not returned, and still big otherwise. Of course, these microbenchmarks are unlikely to dominate your application's performance.
+I chose this microbenchmark somewhat at random after looking at Netty's [extensive collection](https://github.com/netty/netty/tree/4.1/microbench/src/main/java/io/netty/microbench). The speedup is massive in the case when allocation is not pooled, and void Promises are not returned, and still big otherwise. Of course, these methods are unlikely to dominate your application's performance.
 
-Note: Netty also offers [Native Transport](https://netty.io/wiki/native-transports.html)... so if we could try compiling *this* as well!
+Note: Netty offers [Native Transport](https://netty.io/wiki/native-transports.html)... so if we could compile *this* as well!
 
 ### Summary
 
-So, while you need to test with your own applications, it is clear that targeting the JDK to a specific architecture can provide significant throughput improvements. Coupled with the absolute ease that is building new JDKs, developers of performance-critical Java applications should consider building an optimized JDK, just the same as C/++ developers build optimized binaries.
+So, while you need to test with your own applications, it is clear that targeting the JDK to a specific architecture can provide significant throughput improvements. Coupled with the absolute ease of building new JDKs ([Project Skara](https://openjdk.java.net/projects/skara/) is awesome), developers of performance-critical Java applications should seriously consider building an optimized JDK, just the same as C/++ developers build optimized binaries.
 
 ### Tables for Those Inclined
 
