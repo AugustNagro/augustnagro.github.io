@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Surprising Speedup after Building OpenJDK from Source
+title: Build OpenJDK for a Big Speedup
 date: 2019-11-2
 ---
 Just-in-time compilation (JIT) is a beautiful thing, and Java leads the industry. But unlike C2, which compiles class files with optimizations for a particular OS (mac), ISA (x86_64), and Architecture (Intel Broadwell), JVM distributions themselves are compiled **only** for OS and ISA for portability (and reduce the number of build combinations).
