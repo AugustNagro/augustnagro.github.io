@@ -57,12 +57,12 @@ Finally I executed some JMH microbenchmarks for [Netty](https://netty.io/wiki/mi
 
 <p align="center"><img src="/images/bench/netty.png" class="img-responsive" alt="Netty JMH Results"></p>
 
-I chose this microbenchmark somewhat at random after looking at Netty's [extensive collection](https://github.com/netty/netty/tree/4.1/microbench/src/main/java/io/netty/microbench). The speedup is massive in the case when allocation is not pooled, and void Promises are not returned, and still big otherwise. Of course, these methods are unlikely to dominate your application's performance. There appears to be an outlier in the second chunked bench. 
+I chose this microbenchmark somewhat at random after looking at Netty's [extensive collection](https://github.com/netty/netty/tree/4.1/microbench/src/main/java/io/netty/microbench). The speedup is massive in the case when allocation is not pooled, and void Promises are not returned, and still big otherwise. Of course, these methods are unlikely to dominate your application's performance. There appears to be a glitch in the second chunked bench. 
 
 Note: Netty offers [Native Transport](https://netty.io/wiki/native-transports.html)... so if we could compile *this* as well!
 
 ### Other Compilers and OS
-I also tried building with [Intel's Compiler](https://software.intel.com/en-us/c-compilers), and patched the configure scripts to allow it. However, the build failed. I'd also be interested to see Linux results.
+I also tried building with [Intel's Compiler](https://software.intel.com/en-us/c-compilers), and patched the configure scripts to allow it. However, the build failed cryptically. I'd also be interested to see Linux results.
 
 ### Summary
 
