@@ -1,15 +1,15 @@
 ---
 layout: post
-title: Beat Parallel Streams with CountedCompleter
+title: Parallelism with Java Streams and CountedCompleter
 date: 2019-12-28
 ---
 Parallel processing is an optimization. So if a problem demands parallelization, you should make sure the computational model is as performant as possible.
 
 This leads to my claim:
 
-> For almost every parallel workload, a custom [CountedCompleter](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/CountedCompleter.html) subclass will outperform parallel Streams.
+> Parallel processing is problem-dependent, while Parallel Streams are general.
 
-Of course Parallel Streams use CountedCompleter internally via [AbstractTask](https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/util/stream/AbstractTask.java), but this post will show that the one-size-fits-all implementation is suboptimal in many scenarios.
+Parallel Streams are based on [CountedCompleter](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/CountedCompleter.html) in class [AbstractTask](https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/util/stream/AbstractTask.java), and does a reasonably good job in non-blocking parallel workloads. But by exploiting the shape and properties of the problem, performance can be significantly improved.
 
 1. [Big Ideas: what are ForkJoinPool, ForkJoinTask, and CountedCompleter?](#big-ideas)
 2. [Optimizing CountedCompleter](#optimizing-countedcompleter)
@@ -17,7 +17,7 @@ Of course Parallel Streams use CountedCompleter internally via [AbstractTask](ht
 4. [Conclusion & Benchmark Source](#conclusion)
 
 ### Big Ideas
-Java's Fork-Join Framework ([ForkJoinPool](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/ForkJoinPool.html), [ForkJoinTask](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/ForkJoinTask.html), [CountedCompleter](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/CountedCompleter.html)) is superior to thread pools for non-blocking parallelism, thanks to work-stealing and recursion. Please refer to the JavaDoc for performance characteristics vs standard thread pools. ForkJoinTask subclasses like RecursiveAction, RecursiveTask, and CountedCompleter are submitted to the ForkJoinPool, and either recursivly split off new tasks, or execute some computation. Of the three concrete ForkJoinTasks, CountedCompleter is the most efficient, since it avoids the blocking `join()` by providing its own continuations. And while CountedCompleter is somewhat less straightforward to program, it is not as conceptually challenging as the JavaDoc would suggest.
+Java's Fork-Join Framework ([ForkJoinPool](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/ForkJoinPool.html), [ForkJoinTask](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/ForkJoinTask.html), [CountedCompleter](https://docs.oracle.com/en/java/javase/13/docs/api/java.base/java/util/concurrent/CountedCompleter.html)) is superior to thread pools for non-blocking parallelism, thanks to work-stealing and recursion. Refer to the JavaDoc for performance characteristics vs standard thread pools. ForkJoinTask subclasses like RecursiveAction, RecursiveTask, and CountedCompleter are submitted to the ForkJoinPool, and either recursivly split off new tasks, or execute some computation. Of the three concrete ForkJoinTasks, CountedCompleter is the most efficient, since it avoids the blocking `join()` by providing its own continuations. And while CountedCompleter is somewhat less straightforward to program, it is not as conceptually challenging as the JavaDoc would suggest.
 
 Consider a simple map-reduce operation done over a large array:
 
