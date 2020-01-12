@@ -4,7 +4,7 @@ title: Vendetta against Java Streams
 date: 2020-1-11
 ---
 
-I like Java Streams as much as the next guy, but I can't say that my experience using them has been all sunny. Here's the long list of problems I've had with Streams during the last few years I've been using them:
+I like Java Streams as much as the next guy, but I can't say that my experience using them has been all sunny. Here's the long list of problems I've had with Streams during the last few years I've used them:
 
 * Streams make single-threaded code harder to read and write. You need to categorize all your operations into the predefined 'map', 'reduce', etc. I often spend more time trying to shape my problem into Stream format than actually solving the problem.
 
@@ -12,7 +12,9 @@ I like Java Streams as much as the next guy, but I can't say that my experience 
 
 * `Stream::parallel` implications are unclear. For example, what is the speedup of Files.list(...).parallel().collect(...)? You will gain maximum sqrt(#cores) speedup, since Files.list(..) returns an unsized stream, so AbstractTask has to progressively buffer. Nowhere will the docs tell you this!
 
-* Parallel Streams all run on the the common (shared) ForkJoinPool. Sharing with others is fine, and even preferred, but if one of the submitted tasks blocks or behaves inappropriately, performance suffers for all tasks.
+* Parallel Streams all run on the the common (shared) ForkJoinPool. Sharing with others is fine, and even preferred, but if one of the submitted tasks blocks or behaves inappropriately, performance suffers for all tasks. Eventually Project Loom will be running your virtual threads on the ForkJoinPool (by default), which is another reason to be careful.
+
+* The implementation of Parallel Streams is one-size-fits all; [directly using CountedCompleter can be much better](http://august.nagro.us/CountedCompleter.html)
 
 * One of the interesting things about ForkJoinTasks is that they are serializable. Can't do that with parallel Streams
 
@@ -35,11 +37,11 @@ for (Path p : paths) {
 }
 {% endhighlight %}
 
-There was a proposal by Stewart Marks of Oracle to fix this, but Stream's push model is in fundamental contrast with Iterable's pull model. Not surprisingly, the proposal has not been implemented.
+There was a proposal by Stewart Marks of Oracle to fix this, but Stream's push model is in fundamental contrast with Iterable's pull model. Not surprisingly, the proposal hasn't been implemented.
 
-* Parallel streams are terrible if there's blocking (like waiting for IO or a monitor). With a custom CountedCompleter, you can use ManagedBlocker and Phasers to actually handle this problem, instead of just degrading the common ForkJoinPool, as in the case of parallel Streams.
+* Parallel streams are terrible if there's blocking (like waiting for IO or a monitor). With a custom CountedCompleter, you can use ManagedBlocker and Phasers to actually handle the problem, instead of just degrading the common ForkJoinPool, as parallel Streams do.
 
-* I know grad students that are much smarter then me, work on Java daily, yet they've never bothered to understand or make use of streams, and I can't think of a good reason for them to do so.
+* I know grad students much smarter then me who work with Java daily, yet have never bothered to understand or make use of streams. And I can't think of a good reason for them to do so. Few developers I work with even know about Streams, and those that do have a hard time explaining what a `terminal operation` is, or why `peek()` should be avoided because it isn't pure.
 
 ---
 
@@ -47,7 +49,7 @@ Now lets consider the biggest benefit Stream provides:
 
 * You can use them at API points, to avoid defensive copying. Of course, this provides only a shallow defense, since the collection members themselves could still be mutated. One could avoid the defensive copying problem entirely by writing good JavaDoc, and having faith in your fellow developers.
 
-* Quick and dirty parallelism is easy to implement. Definitely, but directly using CountedCompleter is not really that hard. Parallelism is only an optimization, after all. (see [http://august.nagro.us/universal-hashing-java.html](http://august.nagro.us/universal-hashing-java.html)).
+* Quick and dirty parallelism is easy to implement. Definitely, but directly using CountedCompleter can be much faster. Parallelism is only an optimization, after all. (see [http://august.nagro.us/CountedCompleter.html](http://august.nagro.us/CountedCompleter.html)).
 
 ---
 
