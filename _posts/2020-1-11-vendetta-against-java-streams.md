@@ -4,11 +4,11 @@ title: Vendetta against Java Streams
 date: 2020-1-11
 ---
 
-I like Java Streams as much as the next guy, but I can't say that my experience using them has been all sunny. Here's a needlessly long list of problems I've had with Streams during the last few years I've been using them:
+I like Java Streams as much as the next guy, but I can't say that my experience using them has been all sunny. Here's the long list of problems I've had with Streams during the last few years I've been using them:
 
 * Streams make single-threaded code harder to read and write. You need to categorize all your operations into the predefined 'map', 'reduce', etc. I often spend more time trying to shape my problem into Stream format than actually solving the problem.
 
-* The implementation of Stream is complex and generates garbage.
+* Debugging is painful. Unless you're using an advanced editor like Intellij IDEA, good luck.
 
 * `Stream::parallel` implications are unclear. For example, what is the speedup of Files.list(...).parallel().collect(...)? You will gain maximum sqrt(#cores) speedup, since Files.list(..) returns an unsized stream, so AbstractTask has to progressively buffer. Nowhere will the docs tell you this!
 
@@ -22,11 +22,14 @@ I like Java Streams as much as the next guy, but I can't say that my experience 
 
 * We need to always think about auto-boxing, and use IntStream, LongStream, and mapToInt, mapToLong, etc.
 
+* The implementation of Stream is complex and generates garbage.
+
 * Catched exceptions are a huge pain to deal with. Code like `long sumOfSizes = Files.list(..).map(Files::size).sum();` is impossible, since we need to wrap Files.size in a try {...} catch (..) {} block.
 
 * Streams cannot be used in for-each loops since Stream and Spliterator do not implement Iterable. For example:
 {% highlight java %}
-Stream paths = Files.list(...).filter(Files::isRegularFile);
+Stream<Path> paths = Files.list(...)
+                          .filter(Files::isRegularFile);
 for (Path p : paths) {
   ...
 }
@@ -48,4 +51,4 @@ Now lets consider the biggest benefit Stream provides:
 
 ---
 
-Maybe there are some points you disagree with, and maybe some workarounds, but try to think of the big picture here. Streams are just like the crufty GO4 design patterns you learn in college. By overloading the abstraction, we arrive at a solution that constrains the code we write, while muddying debugging and performance. Frankly I think the OpenJDK developers did a good job building Stream. It is much better than Scala's implementation in its standard library. Yet it suffers from the same fundamental problems and should be avoided.
+Maybe there are some points you disagree with, and maybe some workarounds, but think of the big picture here. Streams are just like the crufty GO4 design patterns you learn in college. By overloading the abstraction, we arrive at a solution that constrains the code we write, while muddying debugging and performance. So why does java.util.Stream even exist? Maybe it's a fig leaf for the starry-eyed purely-functional undergrads (addicts?), who would rather struggle implementing Quick Sort than build software that makes money. Which was me at once point, I ashamedly admit. In any case I think the OpenJDK developers did a good job building Stream. It is much better than Scala's approach in its standard library, but I will be avoiding both nonetheless.
