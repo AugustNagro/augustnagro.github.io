@@ -78,4 +78,4 @@ array[index] = o;
 This is slightly different than the Fast-Range author's C code, since Java does not have unsigned integers. The `(h & 0xffffffffL)` is used as a poor-man's unsigned widening. Of course, if the array is a power of two, better to copy the Xor-Shift strategy in java.util.Hashmap since C2 can eliminate the array out-of-bounds checks. There is an open issue for Fast-Range: [https://bugs.openjdk.java.net/browse/JDK-8234333](https://bugs.openjdk.java.net/browse/JDK-8234333).
 
 
-With such arcane optimizations and obscure knowledge, it sometimes feels like the study of hashing is more art than science. It is a good thing then, that my University puts Computer Science under the Liberal Arts, a fact my brother in the Engineering college will not let me forget.
+With such arcane optimizations and obscure knowledge, it often feels like the study of hashing is more art than science. It is a good thing then that my University puts Computer Science under the Liberal Arts, a fact my brother in the Engineering college is happy to remind me of.
