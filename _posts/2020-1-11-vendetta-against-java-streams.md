@@ -14,9 +14,9 @@ I like Java Streams as much as the next guy, but I can't say that my experience 
 
 * Parallel Streams all run on the the common (shared) ForkJoinPool. Sharing with others is fine, and even preferred, but if one of the submitted tasks blocks or behaves inappropriately, performance suffers for all tasks. Eventually Project Loom will be running your virtual threads on the ForkJoinPool (by default), which is another reason to be careful.
 
-* The implementation of Parallel Streams is one-size-fits all; [directly using CountedCompleter can be much better](http://august.nagro.us/CountedCompleter.html)
+* The implementation of Parallel Streams is one-size-fits all; [directly using CountedCompleter can be much better](http://august.nagro.us/CountedCompleter.html).
 
-* One of the interesting things about ForkJoinTasks is that they are serializable. Can't do that with parallel Streams
+* One of the interesting things about ForkJoinTasks is that they are serializable. Can't do that with parallel Streams.
 
 * Stream Characteristics are half-heartedly implemented, and have strange effects on performance. If you have a SIZED Stream S, for example, S.limit(100) will lose its SIZED characteristic, hurting performance. A good blog on the matter: [https://richardstartin.github.io/posts/spliterator-characteristics-and-performance](https://richardstartin.github.io/posts/spliterator-characteristics-and-performance).
 
@@ -24,7 +24,7 @@ I like Java Streams as much as the next guy, but I can't say that my experience 
 
 * We need to always think about auto-boxing, and use IntStream, LongStream, and mapToInt, mapToLong, etc.
 
-* The implementation of Stream is complex and generates garbage.
+* The implementation of Stream is complex and generates garbage. Using Streams over small datasets or in tight loops will kill performance.
 
 * Catched exceptions are a huge pain to deal with. Code like `long sumOfSizes = Files.list(..).map(Files::size).sum();` is impossible, since we need to wrap Files.size in a try {...} catch (..) {} block.
 
@@ -41,11 +41,11 @@ There was a proposal by Stewart Marks of Oracle to fix this, but Stream's push m
 
 * Parallel streams are terrible if there's blocking (like waiting for IO or a monitor). With a custom CountedCompleter, you can use ManagedBlocker and Phasers to actually handle the problem, instead of just degrading the common ForkJoinPool, as parallel Streams do.
 
-* I know grad students much smarter then me who work with Java daily, yet have never bothered to understand or make use of streams. And I can't think of a good reason for them to do so. Few developers I work with even know about Streams, and those that do have a hard time explaining what a `terminal operation` is, or why `peek()` should be avoided because it isn't pure.
+* I know grad students much smarter then me who work with Java daily, yet have never bothered to understand or make use of Streams. And I can't think of a good reason for them to do so. Few developers I work with even know about Streams, and those that do have a hard time explaining what a `terminal operation` is, or why `peek()` should be avoided outside debugging because it isn't pure.
 
 ---
 
-Now lets consider the biggest benefit Stream provides:
+Now lets consider the benefits Stream provides:
 
 * You can use them at API points, to avoid defensive copying. Of course, this provides only a shallow defense, since the collection members themselves could still be mutated. One could avoid the defensive copying problem entirely by writing good JavaDoc, and having faith in your fellow developers.
 
