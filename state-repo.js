@@ -1,45 +1,63 @@
 /**
- * Represents a State, that can be written to by a StateWriter, and read by StateReaders.
+ * Represents a State, that can be written to by at most one a StateWriter,
+ * and read by StateReaders.
  *
- * <p>
- * Has 4 Properties:
- * <p>
- * id: Any, a unique identifier for this State, for example a String
- * <p>
- * value: Any, undefined until a writer sets
- * <p>
- * writer: StateWriter
- * <p>
- * readers: Set of StateReaders
+ * @template T
  */
 class State {
 	/**
-	 * @param id: Any the State's identifier. Strings are recommended
+	 * @param {*} id A unique identifier for this State. Strings are recommended.
 	 */
 	constructor(id) {
+		/** 
+		 * A unique identifier for this State. Strings are recommended.
+		 *
+		 * @private @const {*}
+		 */
 		this.id = id;
+
+		/**
+		 * The State's value. Undefined until a writer sets.
+		 *
+		 * @private {T}
+		 */
+		this.value = undefined;
+
+		/** @private {!StateWriter|undefined} */
+		this.writer = undefined;
+
+		/** @private @const {!Set<!StateReader>} */
 		this.readers = new Set();
 	}
 }
 
 /**
  * Reads a State; its changeListener is fired when the State changes.
+ *
+ * @template T
  */
 class StateReader {
 	/**
-	 * @param state: State
-	 * @param changeListener: (newValue, StateReader) => Void
+	 * @param {!State} state
+	 * @param {function(T, !StateReader)} changeListener
 	 */
 	constructor(state, changeListener) {
+		/** @private @const {!State} */
 		this._state = state;
+
+		/** @private @const {function(T, !StateReader)} */
 		this._changeListener = changeListener;
+
+		/** @private {boolean} */
 		this._registered = true;
 	}
 
 	/**
 	 * Returns the State's identifier.
+	 *
+	 * @return {*}
 	 */
-	get id() {
+	id() {
 		return this._state.id;
 	}
 
@@ -47,16 +65,20 @@ class StateReader {
 	 * Gets the current value. Must not be modified.
 	 * Will return undefined until value is set.
 	 * This method should not be regularly called.
+	 *
+	 * @return {T}
 	 */
-	get value() {
+	value() {
 		return this._state.value;
 	}
 
 	/**
 	 * true if the StateReader is registered for updates,
 	 * false otherwise.
+	 *
+	 * @return {boolean}
 	 */
-	get registered() {
+	registered() {
 		return this._registered;
 	}
 
@@ -64,6 +86,8 @@ class StateReader {
 	 * Registers this StateReader for State updates.
 	 * Returns true if registration succeeded,
 	 * false if already registered
+	 *
+	 * @return {boolean}
 	 */
 	register() {
 		if (this._registered) return false;
@@ -76,6 +100,8 @@ class StateReader {
 	 * Unregisters this StateReader from State updates.
 	 * Returns true if unregistration succeeded,
 	 * false if already unregistered.
+	 *
+	 * @return {boolean}
 	 */
 	unregister() {
 		if (!this._registered) return false;
@@ -88,22 +114,31 @@ class StateReader {
 /**
  * Writes to a State, firing the State's registered changeListeners when
  * set(newVal) is called.
+ *
+ * @template T
  */
 class StateWriter {
 	/**
-	 * @param state: State
-	 * @param repo: StateRepo owning this StateWriter
+	 * @param {!State} state
+	 * @param {!StateRepo} repo
 	 */
 	constructor(state, repo) {
+		/** @private @const {!State} */
 		this._state = state;
+
+		/** @private @const {!StateRepo} */
 		this._repo = repo;
+
+		/** @private {boolean} */
 		this._registered = true;
 	}
 
 	/**
 	 * Returns the State's identifier
+	 *
+	 * @return {*}
 	 */
-	get id() {
+	id() {
 		return this._state.id;
 	}
 
@@ -111,16 +146,46 @@ class StateWriter {
 	 * Gets the current value. Returned object should not be
 	 * modified, unless set(state) is called afterwards.
 	 * Will return undefined until value is set.
+	 *
+	 * @return {T}
 	 */
-	get value() {
+	value() {
 		return this._state.value;
+	}
+
+	/**
+	 * Directly sets this StateWriter's value, notifying all registered StateReaders.
+	 *
+	 * @param {T} newValue
+	 */
+	setValue(newValue) {
+		this._state.value = newValue;
+		for (let r of this._state.readers) {
+			r._changeListener(newValue, r);
+		}
+	}
+
+	/**
+	 * Set the StateWriter's value, notifying all registered StateReaders.
+	 *
+	 * @param {function(T): T} f Function accepting the old value, and returning the new.
+	 * Remember that the old value may be initially undefined.
+	 */
+	set(f) {
+		const newValue = f(this._state.value);
+		this._state.value = newValue;
+		for (let r of this._state.readers) {
+			r._changeListener(newValue, r);
+		}
 	}
 
 	/**
 	 * true if the StateWriter is registered for updates,
 	 * false otherwise.
+	 *
+	 * @return {boolean}
 	 */
-	get registered() {
+	registered() {
 		return this._registered;
 	}
 
@@ -128,26 +193,13 @@ class StateWriter {
 	 * Unregisters this object as the Writer to its State.
 	 * To update the State again, you need to create a fresh StateWriter object.
 	 *
-	 * @return true if unregistration was successful, false if already unregistered
+	 * @return {boolean} true if unregistration was successful, false if already unregistered
 	 */
 	unregister() {
 		if (!this._registered) return false;
-		delete this._state.writer;
+		this._state.writer = undefined;
 		this._registered = false;
 		return true;
-	}
-
-	/**
-	 * Set the State's value, notifying all registered StateReaders.
-	 *
-	 * @param v: Any | oldVal => newVal. Either a new value, or function from old to new.
-	 * Remember that oldVal may be initially undefined.
-	 * @return Void
-	 */
-	set(v) {
-		const newValue = typeof v === 'function' ? v(this._state.value) : v;
-		this._state.value = newValue;
-		for (let r of this._state.readers) r._changeListener(newValue, r);
 	}
 }
 
@@ -156,42 +208,58 @@ class StateWriter {
  */
 export class StateRepo {
 	constructor() {
+		/** @private @const {!Map<*, !State>} */
 		this._map = new Map();
 	}
 
 	/**
 	 * Returns a new StateReader
-	 * @param id: Any, a unique identifier, like the String 'state1'
-	 * @param changeListener: (newVal, StateReader) => Void, fired when the State is updated
+	 *
+	 * @template T
+	 * @param {*} id A unique identifier, such as a String
+	 * @param {function(T, !StateReader<T>): T} changeListener fired when State is updated
+	 * @return {!StateReader<T>}
 	 */
 	reader(id, changeListener) {
 		let state = this._map.get(id);
-		if (!state) this._map.set(id, (state = new State(id)));
+		if (!state) {
+			state = new State(id);
+			this._map.set(id, state);
+		}
 		const reader = new StateReader(state, changeListener);
 		state.readers.add(reader);
 		// fire listener if the State already has a value.
-		if (state.value) changeListener(state.value, reader);
+		if (state.value !== undefined) changeListener(state.value, reader);
 		return reader;
 	}
 
 	/**
 	 * Returns a new StateWriter for this id, otherwise throws exception
-	 * @param id: Any, a unique identifier, like the String 'state1'
-	 * @param initialValue: Any, may be undefined. Only set if the State
+	 *
+	 * @template T
+	 * @param {*} id A unique identifier, such as a String
+	 * @param {T=} initialValue Optional. Only set if the State
 	 * for id does not already exist.
+	 * @return {StateWriter<T>}
 	 */
-	writer(id, initialValue) {
+	writer(id, initialValue = undefined) {
 		let state = this._map.get(id);
-		if (!state) this._map.set(id, (state = new State(id)));
-		else if (state.writer) throw 'Writer already exists for ' + id;
+		if (!state) {
+			state = new State(id);
+			this._map.set(id, state);
+		} else if (state.writer) {
+			throw new Error('Writer already exists for ' + id);
+		}
 		const writer = new StateWriter(state, this);
 		state.writer = writer;
-		if (initialValue) writer.set(initialValue);
+		if (initialValue !== undefined) writer.setValue(initialValue);
 		return writer;
 	}
 }
 
 /**
  * The default StateRepo
+ *
+ * @public @const
  */
 export const repo = new StateRepo();

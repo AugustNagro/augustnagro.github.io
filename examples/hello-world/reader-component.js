@@ -12,7 +12,7 @@ class ReaderComponent extends HTMLElement {
 		const s = this.attachShadow({ mode: 'open' });
 		s.appendChild(template.content.cloneNode(true));
 
-		repo.reader(USER_STATE, this.updateUserName.bind(this));
+		repo.reader(USER_STATE, u => this.updateUserName(u));
 	}
 
 	updateUserName(user) {
