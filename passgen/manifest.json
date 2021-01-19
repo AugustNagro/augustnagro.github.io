@@ -1,0 +1,19 @@
+{
+  "name": "PassGen",
+  "short_name": "PassGen",
+  "description": "Password Generator",
+  "lang": "en-US",
+  "start_url": "/passgen/",
+  "display": "standalone",
+  "background_color": "white",
+  "theme_color": "white",
+  "icons": [
+    {
+      "src": "/passgen/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "prefer_related_applications": true,
+  "related_applications": []
+}

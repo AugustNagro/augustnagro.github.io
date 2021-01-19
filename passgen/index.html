@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PassGen</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/passgen/">
+
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+
+    <template id="pass-gen">
+      <style>
+        :host {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        :host > * {
+          margin-bottom: 15px;
+        }
+
+        #options {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        #options p {
+          text-align: right;
+        }
+        
+        #password {
+          font-family: monospace;
+          width: 250px;
+          overflow-wrap: anywhere;
+        }
+        
+        .clipboard-hack {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 2em;
+          height: 2em;
+          padding: 0;
+          border: none;
+          outline: none;
+          boxShadow: none;
+          background: transparent;
+        }
+      </style>
+
+      <div id="options">
+        <p>Min Length:</p>
+        <input type="number" id="min-length" name="Min Length" min="0" max="99" value="15">
+        <p>Numbers:</p>
+        <input type="number" id="numbers" name="Numbers" min="0" max="99" value="0">
+      </div>
+      <button id="submit" disabled>Generate & Copy to Clipboard</button>
+      <fieldset>
+        <legend>Password:</legend>
+        <p id="password">(click generate or hit Enter ⏎)</p>
+      </fieldset>
+
+    </template>
+
+    <script src="passgen.js"></script>
+  </head>
+  <body>
+  <pass-gen></pass-gen>
+</body>
+</html>
