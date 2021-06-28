@@ -12,6 +12,10 @@ main {
     padding-right: 2vw;
 }
 
+p {
+    line-height: 1.5;
+}
+
 main div {
     min-width: 100%;
 }
