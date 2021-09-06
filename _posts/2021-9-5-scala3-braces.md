@@ -38,19 +38,23 @@ users.map(u => s"Hello, $u!").mkString(", ")
 Scala 2:
 
 {% highlight scala %}
-users.map(u => {
-  val name = u.name.trim
-  s"Hello, $name!"
-}).mkString(", ")
+users
+  .map(u => {
+    val name = u.name.trim
+    s"Hello, $name!"
+  })
+  .mkString(", ")
 {% endhighlight %}
 
 The multi-line version in Scala 2 requires braces that seem downright obnoxious after exposure to Scala 3.
 
 {% highlight scala %}
-users.map(u =>
-  val name = u.name.trim
-  s"Hello, $name!"
-).mkString(", ")
+users
+  .map(u =>
+    val name = u.name.trim
+    s"Hello, $name!"
+  )
+  .mkString(", ")
 {% endhighlight %}
 
 These same principles extend to all the other braceless constructs, like if-then-else, and for-yield.
