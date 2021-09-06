@@ -59,3 +59,4 @@ There are still instances where braces are needed, like [by-name parameters](htt
 
 But overall, the braceless syntax is faster, easier to refactor, and more beautiful than the alternative. At least we’re not arguing about tabs-vs-spaces anymore.
 
+
