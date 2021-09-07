@@ -4,9 +4,9 @@ title: Braces in Scala 3 aren't just Optional, they're Consistent
 date: 2021-9-5
 ---
 
-[Scala 3](https://docs.scala-lang.org/scala3/new-in-scala3.html) adds [Optional Braces](https://docs.scala-lang.org/scala3/reference/other-new-features/indentation.html) to the language. At first I was concerned the two different styles would cause confusion and ambiguity, but over time I've realize the new scheme actually makes the language more consistent.
+[Scala 3](https://docs.scala-lang.org/scala3/new-in-scala3.html) adds [Optional Braces](https://docs.scala-lang.org/scala3/reference/other-new-features/indentation.html) to the language. At first I was concerned the two different styles would cause confusion and ambiguity, but over time I've realized the new scheme actually makes the language more consistent.
 
-For example, consider a one-liner method declaration:
+For example, consider a one-line method declaration. In both Scala 2 & 3, braces are optional:
 
 {% highlight scala %}
 def helloWorld: Unit = println("Hello, world!")
@@ -29,13 +29,13 @@ def helloWorld: Unit =
   println(s"Hello, $name!")
 {% endhighlight %}
 
-Another example; consider lambdas. Often they are one-liners, but eventually refactored to multi-line.
+Another example; consider lambdas. Often they are one-liners,
 
 {% highlight scala %}
 users.map(u => s"Hello, $u!").mkString(", ")
 {% endhighlight %}
 
-Scala 2:
+But eventually refactored to multi-line:
 
 {% highlight scala %}
 users
@@ -57,10 +57,10 @@ users
   .mkString(", ")
 {% endhighlight %}
 
-These same principles extend to all the other braceless constructs, like if-then-else, and for-yield.
+These same principles extend to all the other braceless constructs, like if-then-else, while, and for-yield.
 
 There are still instances where braces are needed, like [by-name parameters](https://docs.scala-lang.org/tour/by-name-parameters.html), context functions, or pattern matching inside map{}.
 
-But overall, the braceless syntax is faster, easier to refactor, and more beautiful than the alternative. At least we’re not arguing about tabs-vs-spaces anymore.
+But overall, the braceless syntax is faster, easier to refactor, and more beautiful than the alternative. At least we’re not arguing about tabs-vs-spaces.
 
 
