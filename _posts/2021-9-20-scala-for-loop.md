@@ -155,3 +155,5 @@ Nearly as ergonomic as for-do, and the byte code looks much cleaner:
         return false;
     }
 {% endhighlight %}
+
+I wonder if for-do could be updated to behave like the loop() overloads, falling back to foreach(..) when required. I'm sure it would make some codebases a lot faster.
