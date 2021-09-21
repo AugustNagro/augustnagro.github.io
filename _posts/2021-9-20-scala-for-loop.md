@@ -111,7 +111,7 @@ However if you decompile the output you'll see a monster:
     }
 {% endhighlight %}
 
-Numbers are being boxed, Early Return is implemented by throwing Exceptions, and because x is in an outer scope, the second foreach lambdas is capturing, which generates an anonymous class.
+Numbers are being boxed, Early Return is implemented by throwing Exceptions, and because x is in an outer scope, the second foreach lambda is capturing, which generates an anonymous class.
 
 The performance is good with `while`; the byte code looks exactly like the source. But it's hard to read.
 
