@@ -1,0 +1,9 @@
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(9, 25px);
+}
+
+#board:nth-child(3n + 1) {
+  border-right: 1px solid black;
+}
