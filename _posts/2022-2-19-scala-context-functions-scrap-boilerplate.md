@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Scrap Your Boilerplate with Scala 3 Context Functions
-date: 2021-9-20
+date: 2022-2-19
 ---
 
 We program with contexts all the time. Some examples are Http request time, datbase transactions, or ability to suspend a Coroutine.
