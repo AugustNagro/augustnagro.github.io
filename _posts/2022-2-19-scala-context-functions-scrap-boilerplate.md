@@ -4,7 +4,7 @@ title: Scrap Your Boilerplate with Scala 3 Context Functions
 date: 2022-2-19
 ---
 
-We program with contexts all the time. Some examples are Http request time, datbase transactions, or ability to suspend a Coroutine.
+We program with contexts all the time. Some examples are Http request time, database transactions, or the ability to suspend a Coroutine.
 
 It quickly gets tedious passing contexts method to method. That's why Spring Boot has annotations like [@Transactional](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html) and [@Async](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/annotation/Async.html). But Spring's annotations aren't typesafe, and they don't compose well either. If you write a @Transactional method, and somewhere deep in the callstack an @Async method gets called.. your database state can get corrupted. Fun.
 
