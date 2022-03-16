@@ -18,6 +18,7 @@ Given
 
 {% highlight scala %}
 case class Cls(i: Int)
+
 val list: List[Cls] = ???
 val vector: Vector[Cls] = ???
 {% endhighlight %}
@@ -38,7 +39,7 @@ def vectorSum: Long =
 <img src="http://august.nagro.us/images/list-vector-bench/traversals.png" class="img-responsive"><br>
 </p>
 
-If you have one million elements, Vector can do this 4 milliseconds faster. Not a significant difference. So, Vector meets our requirement for O(n) traversals.
+If you have one million elements, Vector can do this 4 milliseconds faster. Not a very significant difference. So, Vector meets our requirement for O(n) traversals.
 
 ## Usecase 2: Construction with Prepend + Traversals
 
@@ -121,13 +122,13 @@ Not significantly.
 <img src="http://august.nagro.us/images/list-vector-bench/view-traversals.png" class="img-responsive"><br>
 </p>
 
-Views are lazy, which makes debugging & effect tracking harder. So don't use them unless you measure.
+Views are lazy, which makes debugging & resource safety harder. So don't use them unless you measure.
 
 ## Conclusions
 
-If you are using List like a functional Stack, or utilizing its structural sharing, keep using it.
+If you are using List like a functional Stack, keep using it.
 
-Otherwise, Vector is just as fast and more flexable.
+Otherwise, Vector is just as fast and more flexible.
 
 ## JMH Benchmark
 
