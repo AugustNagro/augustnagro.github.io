@@ -8,9 +8,9 @@ It's hard to choose between Scala's List and Vector.
 
 On one hand, List is the most popular sequence. It is the default Seq, and most libraries including the Scala 3 compiler use it extensively. List is very fast in the usecases it is designed for, which are O(n) traversals, head/tail destructuring, and construction with prepend.
 
-Vector is theoretically better than List. It adds O(1) length, O(1) access, O(1) update, and O(1) append methods. Vector is more complicated than List, which could affect its real-world performance. Of course, [List is not that simple either](https://alexn.org/blog/2021/02/12/scala-list-secret.html).
+Vector is theoretically better than List. It adds O(1) length, O(1) access, O(1) update, and O(1) append methods. Vector is more complicated than List, which could affect its real-world performance. Of course, [List is not so simple either](https://alexn.org/blog/2021/02/12/scala-list-secret.html).
 
-Hypothesis: If Vector can match List's performance in the common use-cases, then we should prefer Vector.
+**Hypothesis:** If Vector can match List's performance in the common usecases, then we should prefer Vector.
 
 ## Usecase 1: O(n) Traversals
 
@@ -95,7 +95,7 @@ def vectorBuilderAndSum: Long =
 </p>
 
 
-The mutable Vector builder is also much faster than using `:+`.
+Besides being faster than List's builder, the Vector builder is about 20% faster than building a List with prepend. It's also much faster than using `:+` on Vector:
 
 <p align="center">
 <img src="http://august.nagro.us/images/list-vector-bench/vector-builder-vs-append-plus-traversals.png" class="img-responsive"><br>
