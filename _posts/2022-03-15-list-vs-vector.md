@@ -65,7 +65,7 @@ def vectorPrependAndSum: Long =
 <img src="http://august.nagro.us/images/list-vector-bench/prepended-construction-plus-traversals.png" class="img-responsive"><br>
 </p>
 
-List is 28 ms faster in the case of 1 million elements. Which is starting to get significant.
+List is 28 ms faster in the case of 1 million elements. Which is starting to get significant; don't use Vector as a 'functional Stack'.
 
 ## Usecase 3: Construction with Append + Traversals
 
