@@ -43,7 +43,7 @@ If you have one million elements, Vector can do this 4 milliseconds faster. Not 
 
 ## Usecase 2: Construction with Prepend + Traversals
 
-Of course, every collection needs to be constructed at least once before being used. So lets look at construction followed by traversal.
+Of course, every collection needs to be constructed before being used. So lets look at construction followed by traversal.
 
 If we construct using prepend, List wins.
 
@@ -122,7 +122,7 @@ Not significantly.
 <img src="http://august.nagro.us/images/list-vector-bench/view-traversals.png" class="img-responsive"><br>
 </p>
 
-Views are lazy, which makes debugging & resource safety harder. So don't use them unless you measure.
+Views are lazy, which makes debugging & resource safety harder. The performance difference on million-element collections is only a few milliseconds. So don't use them unless you measure.
 
 ## Conclusions
 
@@ -165,8 +165,6 @@ class Bench:
     list = List.from(data)
     vector = Vector.from(data)
 
-  /* Build the collection in order, filter, map, and sum */
-
   @Benchmark
   def listBuilderAndSum: Long =
     val builder = List.newBuilder[Cls]
@@ -203,9 +201,6 @@ class Bench:
     var vec = Vector.empty[Cls]
     for cls <- data do vec = cls +: vec
     vec.filter(_.i > 0).map(_.i.toLong).sum
-
-
-  /* Just filter, map, and sum the collection */
   
   @Benchmark
   def listSum: Long =
