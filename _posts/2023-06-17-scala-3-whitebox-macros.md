@@ -42,6 +42,8 @@ One way to implement the `Builder` would be with [Macro Annotations](https://sca
 
 But this is not required. [Programatic Structural Types](https://docs.scala-lang.org/scala3/reference/changed-features/structural-types.html#) already let us refine types with new vals and defs. Then we just need a macro to decide the names of the vals & defs. The macro must also be [transparent](https://docs.scala-lang.org/scala3/reference/metaprogramming/macros.html#relationship-with-transparent-inline) in order to return the programmatic type.
 
+In Scala 2 you would use "Whitebox Macros."
+
 ## Implementing the Builder class
 
 As with other Structural Types, our Builder class must implement [Selectable](https://scala-lang.org/api/3.3.0/scala/Selectable.html).
