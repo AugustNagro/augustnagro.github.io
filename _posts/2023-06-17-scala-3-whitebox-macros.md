@@ -142,6 +142,8 @@ Because the setter methods return `this.type`, compiling `Builder[User].wrongMet
 
 Scala 3 meta-programming is a pleasure to use. Macros + structural types allow many possibilities, but should only be used when all other methods are exhausted, since the IDE support and error messages are not as good as the alternatives.
 
+Edit: It appears that returning `this` in a structural type is deprecated: https://github.com/lampepfl/dotty/discussions/14056#discussioncomment-6238099
+
 ## Final Code
 
 {% highlight scala %}
