@@ -31,6 +31,8 @@ We can read the `sqlName` value with the following macro:
 import scala.compiletime.*
 import scala.quoted.*
 
+inline def sqlNameFor[T]: Option[String] = ${ sqlNameForImpl[T] } 
+
 private def sqlNameForImpl[T: Type](using Quotes): Expr[Option[String]] =
   import quotes.reflect.*
   val annot = TypeRepr.of[SqlName]
