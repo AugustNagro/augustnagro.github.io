@@ -85,7 +85,7 @@ private def sqlFieldNamesForImpl[T: Type](using
     .typeSymbol
     .primaryConstructor
     .paramSymss
-    .head
+    .flatten
     .collect:
       case sym if sym.hasAnnotation(annot) =>
         val fieldNameExpr = Expr(sym.name.asInstanceOf[String])
@@ -101,3 +101,5 @@ And in a different file,
 @main def hello: Unit =
   println(sqlFieldNamesFor[AppUser]) // Vector((lastName,last_name))
 {% endhighlight %}
+
+It's weird that the compiler requires the given Quotes to be named, and the error message is pretty cryptic. I've filed a Scala 3 bug: [https://github.com/lampepfl/dotty/issues/18059](https://github.com/lampepfl/dotty/issues/18059)
